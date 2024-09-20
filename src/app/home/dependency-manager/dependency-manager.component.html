@@ -1,0 +1,145 @@
+<mat-toolbar color="primary" class="header">
+  <!-- https://jossef.github.io/material-design-icons-iconfont/ -->
+  <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
+  <input type="file" (change)="onFileSelected($event)" />
+</mat-toolbar>
+<div style="margin: 20px;">
+  <form [formGroup]="dependenciesForm">
+    <mat-card *ngIf="package">
+      <mat-card-header>
+        <mat-card-title><h2 class="mat-h2">{{ package?.name }} &#64; {{package?.version}}</h2></mat-card-title>        
+        <mat-card-subtitle>
+          <span>{{countDependencies}} dependencies </span><br>
+          <span>{{countDevDependencies}} devDependencies </span>
+        </mat-card-subtitle>
+        <div>
+          <button *ngIf="package && !auditResults" (click)="audit()" mat-button>audit</button>
+          <ng-container *ngIf="auditResults">
+            <mat-card-title><h3 class="mat-h3">Audit</h3></mat-card-title>        
+            <mat-card-content>
+              <app-audit-report [report]="auditResults">
+              </app-audit-report>
+            </mat-card-content>
+          </ng-container>
+        </div>
+      </mat-card-header>
+      <mat-card-content>
+          <mat-card-actions>
+            <button (click)="showPackage = !showPackage" mat-button>show package</button>
+          </mat-card-actions>
+        <button class="float" mat-icon-button aria-label="copy package.json to clipboard" (click)="copyJsonToClipboard()">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        <div class="json" *ngIf="showPackage">
+          <pre>{{package | json}}</pre>
+        </div>
+        <mat-progress-spinner  color="accent" *ngIf="isLoading"></mat-progress-spinner>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="package-wrapper" *ngFor="let dep of $any(dependenciesForm.get('dependencies')).controls" [id]="dep.get('name').value">
+      <div class="loader" *ngIf="dep.get('isLoading').value || dep.get('version')?.pending">
+        <mat-spinner diameter="24" ></mat-spinner>
+      </div>
+      <mat-card-header>
+        <mat-card-title><h3>{{ dep.get('name').value }}</h3>
+        </mat-card-title>
+
+      </mat-card-header>
+        <mat-card-content>
+          <div class="package">
+            <div class="version">
+              <mat-form-field>
+                <mat-label>Version</mat-label>
+                <mat-select [formControl]="dep.get('version')" (change)="onVersionChange(dep,$event)">
+                  <mat-option *ngFor="let version of getAvailableVersionsList(dep.get('name').value) | async" [value]="version">
+                    {{ version }}
+                  </mat-option>
+                </mat-select>
+                <mat-error>
+                </mat-error>
+              </mat-form-field>
+              <div class="version-control">
+                <button mat-stroked-button color="accent" type="submit" (click)="updatePatch(dep)">~ Patch</button>
+                <button mat-stroked-button color="accent" type="submit" (click)="updateMinor(dep)">^ Minor</button>
+                <button mat-stroked-button color="accent" type="submit" (click)="updateMajor(dep)">+ Major</button>
+                <button mat-stroked-button color="accent" type="submit" (click)="updateLatest(dep)">* latest</button>
+              </div>
+            </div>
+            <div class="dependencies">
+              <mat-accordion class="dep" *ngIf="depCount(dep.get('name').value,dep.get('version').value)">
+                <mat-expansion-panel hideToggle>
+                  <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
+                    <mat-panel-title> Dependencies </mat-panel-title>
+                    <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
+                    <mat-panel-description> {{ depCount(dep.get('name').value,dep.get('version').value) }} </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="peerdep__details">
+                    <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+                      <mat-chip 
+                        *ngFor="let dependency of getDepsList(dep.get('name').value, dep.get('version').value,'dependencies')"  
+                        clickable 
+                        (click)="jumpToDep(dependency.name!)">
+                        {{ dependency.name }} &#64; {{ dependency.version }}
+                      </mat-chip>
+                    </mat-chip-set>                    
+                    <div class="errors">
+                      {{dep.errors?.unmetDependencies}}
+                    </div>
+                  </div>
+    
+                </mat-expansion-panel>
+              </mat-accordion>
+              <mat-accordion class="devdep" *ngIf="devDepCount(dep.get('name').value,dep.get('version').value)">
+                <mat-expansion-panel hideToggle>
+                  <mat-expansion-panel-header [ngClass]="{'warn':dep.errors?.unmetDevDependencies}">
+                    <mat-panel-title> Dev Dependencies </mat-panel-title>
+                    <mat-panel-description> 
+                      {{ devDepCount(dep.get('name').value,dep.get('version').value) }} 
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="peerdep__details">
+                    <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+                      <mat-chip [ngClass]="{'mat-warn': dep.errors?.unmetDevDependencies?.includes(dep.get('name').value)}" 
+                        *ngFor="let devdep of getDepsList(dep.get('name').value, dep.get('version').value,'devDependencies')"  
+                        clickable 
+                        (click)="jumpToDep(devdep.name!)">
+                        {{ devdep.name }} &#64; {{ devdep.version }}
+                      </mat-chip>
+                    </mat-chip-set>                    <div class="errors">
+                      {{dep.errors?.unmetDevDependencies}}
+                    </div>
+                  </div>
+    
+                </mat-expansion-panel>
+              </mat-accordion>
+              <mat-accordion class="peerdep" *ngIf="peerDepCount(dep.get('name').value,dep.get('version').value)">
+                <mat-expansion-panel [ngClass]="{'warn':dep.errors?.unmetPeerDependencies}" hideToggle>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title> Peer Dependencies </mat-panel-title>
+                    <mat-panel-description class="mat-warn"> 
+                      {{ peerDepCount(dep.get('name').value,dep.get('version').value) }} 
+                      <mat-icon class="mat-warn" *ngIf="dep.errors?.unmetPeerDependencies" fontIcon="warning"></mat-icon>
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="peerdep__details">
+                    <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+                      <mat-chip  [ngClass]="{'mat-warn': dep.errors?.unmetPeerDependencies?.includes(dep.get('name').value)}"
+                        *ngFor="let peerdep of getDepsList(dep.get('name').value, dep.get('version').value,'peerDependencies')"  
+                        clickable 
+                        (click)="jumpToDep(peerdep.name!)">
+                        {{ peerdep.name }} &#64; {{ peerdep.version }}
+                      </mat-chip>
+                    </mat-chip-set>                    <div class="errors">
+                      {{dep.errors?.unmetPeerDependencies}}
+                    </div>
+                  </div>
+    
+                </mat-expansion-panel>
+              </mat-accordion>
+            </div>
+          </div>
+        </mat-card-content>
+    </mat-card>
+  </form>
+  <app-package-autocomplete *ngIf="package" (added)=onPackageAdded($event)></app-package-autocomplete>
+</div>

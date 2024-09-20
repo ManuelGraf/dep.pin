@@ -1,11 +1,11 @@
 {
-  "name": "angular-electron",
-  "version": "14.0.1",
-  "description": "Angular 17 with Electron 30 (Typescript + SASS + Hot Reload)",
+  "name": "dep.pin",
+  "version": "1.0.0",
+  "description": "Web App to manage package json files",
   "homepage": "https://github.com/maximegris/angular-electron",
   "author": {
-    "name": "Maxime GRIS",
-    "email": "maxime.gris@gmail.com"
+    "name": "Manuel Graf",
+    "email": "mail@manuelgraf.com"
   },
   "keywords": [
     "angular",
@@ -46,15 +46,19 @@
     "lint": "ng lint"
   },
   "dependencies": {
+    "@angular/animations": "17.3.6",
+    "@angular/cdk": "~17.3.10",
     "@angular/common": "17.3.6",
     "@angular/compiler": "17.3.6",
     "@angular/core": "17.3.6",
     "@angular/forms": "17.3.6",
     "@angular/language-service": "17.3.6",
+    "@angular/material": "17.3.10",
     "@angular/platform-browser": "17.3.6",
     "@angular/platform-browser-dynamic": "17.3.6",
     "@angular/router": "17.3.6",
     "rxjs": "7.8.1",
+    "semver": "7.6.2",
     "tslib": "2.6.2",
     "zone.js": "0.14.4"
   },

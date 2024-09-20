@@ -1,0 +1,95 @@
+@use '@angular/material' as mat;
+@use './pindep-theme-dark' as theme;
+
+.package{
+  display:flex;
+  position: relative;
+  .version{
+    flex: 0 0 30%;
+  }
+  .peerdep{
+    flex:1 1   auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .version-control{
+  }
+}
+.header{
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.package-wrapper{
+  position:relative;
+}
+.version{
+
+}
+.errors{
+  white-space: pre-wrap;
+}
+.loader{
+  flex:0 0 64px;
+  position:absolute;
+  background: var(--mdc-dialog-container-color);
+  display:flex;
+  width: 100%;
+  height:100%;
+  justify-content: center;
+  align-items: center;
+}
+
+.dependencies{flex:1 1 100%}
+.peerDeps{
+  .details{
+    // display:none;
+  }
+}
+.package-info{
+  position: relative;
+}
+.float{
+  position: absolute;
+  top: 30px;
+  right: 30px;
+}
+.json{
+
+
+}
+.warn {
+  color: mat.get-color-from-palette(theme.$my-dark-warn);
+  .mat-expansion-panel-header-title {
+    color: mat.get-color-from-palette(theme.$my-dark-warn, 500)!important; 
+  }
+  .mat-panel-description {
+    color: mat.get-color-from-palette(theme.$my-dark-warn, 500)!important; 
+  }
+  
+  .my-custom-panel .mat-expansion-panel-content {
+    background-color: mat.get-color-from-palette(theme.$my-dark-warn, 50); // Optional background color
+  }
+}
+
+.dependencies{
+  display:flex;
+}
+
+.logo{
+  position: relative;
+  display: flex;
+  justify-content: center;
+  font-weight:700;
+  margin:0;
+  .wide{
+    flex: 0 0 0.6em;
+    text-align: center;
+  }
+}
+.logo-icon{
+  position: absolute;
+  left:50%;
+  top:-0.3em;
+  transform: translate3d(-43%,0,0);
+}

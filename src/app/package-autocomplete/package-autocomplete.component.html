@@ -1,0 +1,11 @@
+<mat-form-field appearance="fill">
+  <mat-label>Package Name</mat-label>
+  <input type="text" matInput (keuyp)="update()" [formControl]="packageControl" [matAutocomplete]="auto" />
+  <mat-autocomplete #auto="matAutocomplete">
+    <mat-option *ngFor="let package of filteredPackages | async" [value]="package">
+      {{ package }}
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
+<button click="add()" mat-button>add</button>
+

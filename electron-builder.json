@@ -18,7 +18,8 @@
     "icon": "dist/assets/icons",
     "target": [
       "portable"
-    ]
+    ],
+    "frame": false
   },
   "portable": {
     "splashImage": "dist/assets/icons/electron.bmp"

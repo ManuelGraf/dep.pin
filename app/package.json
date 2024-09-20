@@ -1,13 +1,14 @@
 {
-  "name": "angular-electron",
-  "description": "Angular Electron sample",
+  "name": "npm-ui",
+  "description": "Peer Dependency checker for package.json files",
   "author": {
-    "name": "Maxime GRIS",
-    "email": "maxime.gris@gmail.com"
+    "name": "Manuel Graf",
+    "email": "mg@apfelkuh.de"
   },
-  "version": "14.0.1",
+  "version": "1.0.0",
   "main": "main.js",
   "private": true,
   "dependencies": {
+    "@angular/material": "^17.3.10"
   }
 }

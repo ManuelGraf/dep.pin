@@ -1,0 +1,232 @@
+// src/styles/custom-theme.scss
+
+@use '@angular/material' as mat;
+@use "sass:map";
+
+
+$palettes: (
+  Primary: (
+    50: #dff5f8,
+    100: #afe5ed,
+    200: #7bd4e2,
+    300: #47c2d5,
+    400: #21b6cc,
+    500: #00aac3,
+    600: #009bb1,
+    700: #008798,
+    800: #007380,
+    900: #025156,
+    contrast: (
+      50: #025156,
+      100: #025156,
+      200: #025156,
+      300: #025156,
+      400: #dff5f8,
+      500: #dff5f8,
+      600: #dff5f8,
+      700: #dff5f8,
+      800: #dff5f8,
+      900: #dff5f8
+    )
+  ),
+  Complementary: (
+    50: #f8e7e8,
+    100: #edc3c4,
+    200: #d18a85,
+    300: #bb5f58,
+    400: #bc3f33,
+    500: #b92e15,
+    600: #ac2516,
+    700: #9c1c12,
+    800: #8f160c,
+    900: #800d00,
+    contrast: (
+      50: black,
+      100: black,
+      200: black,
+      300: black,
+      400: white,
+      500: white,
+      600: white,
+      700: white,
+      800: white,
+      900: white
+    )
+  ),
+  Analogous1: (
+    50: #e6f6ed,
+    100: #c2e8d3,
+    200: #9ad8b7,
+    300: #6eca9b,
+    400: #4abf86,
+    500: #1ab370,
+    600: #11a466,
+    700: #069159,
+    800: #00804d,
+    900: #006038,
+    contrast: (
+      50: black,
+      100: black,
+      200: black,
+      300: black,
+      400: white,
+      500: white,
+      600: white,
+      700: white,
+      800: white,
+      900: white
+    )
+  ),
+  Analogous2: (
+    50: #e6e9f3,
+    100: #bfc8e2,
+    200: #95a5ce,
+    300: #6b82bb,
+    400: #4a67ad,
+    500: #224ea1,
+    600: #1b4698,
+    700: #0d3d8c,
+    800: #003380,
+    900: #00236a,
+    contrast: (
+      50: black,
+      100: black,
+      200: black,
+      300: black,
+      400: white,
+      500: white,
+      600: white,
+      700: white,
+      800: white,
+      900: white
+    )
+  ),
+  Triadic1: (
+    50: #eae4f3,
+    100: #cabce2,
+    200: #a78fcf,
+    300: #8463bd,
+    400: #6b42af,
+    500: #5020a2,
+    600: #471c9d,
+    700: #391495,
+    800: #2b0d8d,
+    900: #0d0080,
+    A100:#e3b9d6,
+    A200:#e3b9d6,
+    A300:#e3b9d6,
+    A400:#e3b9d6,
+    A700:#e3b9d6,
+    contrast: (
+      50: #0d0080,
+      100: #0d0080,
+      200: #0d0080,
+      300: #cabce2,
+      400: #cabce2,
+      500: #cabce2,
+      600: #cabce2,
+      700: #cabce2,
+      800: #cabce2,
+      900: #cabce2
+    )
+  ),
+  Triadic1Dark: (
+    50: #eae4f3,
+    100: #cabce2,
+    200: #a78fcf,
+    300: #8463bd,
+    400: #6b42af,
+    500: #5020a2,
+    600: #471c9d,
+    700: #391495,
+    800: #2b0d8d,
+    900: #0d0080,
+    A100:#e3b9d6,
+    A200:#e3b9d6,
+    A300:#e3b9d6,
+    A400:#e3b9d6,
+    A700:#e3b9d6,
+    contrast: (
+      50: #cabce2,
+      100: #cabce2,
+      200: #cabce2,
+      300: #cabce2,
+      400: #cabce2,
+      500: #cabce2,
+      600: #cabce2,
+      700: #cabce2,
+      800: #cabce2,
+      900: #cabce2
+    )
+  ),
+  Triadic2: (
+    50: #f4e3ee,
+    100: #e3b9d6,
+    200: #d08bbc,
+    300: #bc5da2,
+    400: #ac3990,
+    500: #9c0f7f,
+    600: #90097a,
+    700: #800073,
+    800: #71006c,
+    900: #56005e,
+    contrast: (
+      50: #56005e,
+      100: #56005e,
+      200: #56005e,
+      300: #56005e,
+      400: #f4e3ee,
+      500: #f4e3ee,
+      600: #f4e3ee,
+      700: #f4e3ee,
+      800: #f4e3ee,
+      900: #f4e3ee
+    )
+  )
+);
+
+
+// Light theme palettes
+$my-light-primary: mat.define-palette(map.get($palettes,Primary));
+$my-light-accent: mat.define-palette(map.get($palettes,Triadic2));
+$my-light-warn: mat.define-palette(map.get($palettes,Complementary));
+
+// Light theme
+$my-light-theme: mat.define-light-theme((
+  color: (
+    primary: $my-light-primary,
+    accent: $my-light-accent,
+    warn: $my-light-warn
+  ),
+  density: (
+    scale: -2
+  )
+));
+
+// Dark theme palettes
+$my-dark-primary: mat.define-palette(map.get($palettes,Triadic1Dark));
+$my-dark-accent: mat.define-palette(map.get($palettes,Triadic2));
+$my-dark-warn: mat.define-palette(map.get($palettes,Complementary));
+$text-color: map.get($my-dark-primary,50);
+// $dark-typography: mat-typography-config(
+//   $font-family: ('monospace, Roboto'),
+//   $headline: mat-typography-level(32px, 48px, 700),
+//   $body-1: mat-typography-level(16px, 24px, 500)
+// );
+// Dark theme
+$my-dark-theme: mat.define-dark-theme((
+  color: (
+    primary: $my-dark-primary,
+    accent:$my-dark-accent,
+    warn: $my-dark-warn
+  ),
+  density: (
+    scale: -2
+  )
+));
+
+
+// Create a light theme class for switching
+.body-light-theme {
+  @include mat.all-component-themes($my-light-theme);
+}
