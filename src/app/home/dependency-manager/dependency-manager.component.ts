@@ -13,7 +13,7 @@ import {
 } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { firstValueFrom, map, take } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import * as semver from 'semver';
 import { ClipboardService } from '../../clipboard.service';
 import { ElectronService } from '../../core/services';
@@ -45,7 +45,9 @@ export class DependencyManagerComponent implements OnInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private clipboard: ClipboardService
-  ) {}
+  ) {
+    (window as any).form = this.dependenciesForm;
+  }
 
   ngOnInit(): void {
     this.dependenciesForm = this.fb.group({
@@ -273,16 +275,6 @@ export class DependencyManagerComponent implements OnInit {
       this.auditResults = "";
     });
   }
-
-  // collectSelectedDependencies(): any {
-  //   const selectedDependencies: { [index: string]: any } = {};
-  //   const dependencies = this.dependenciesForm.get('dependencies') as FormArray;
-  //   dependencies.controls.forEach(control => {
-  //     selectedDependencies[control.get('name')?.value] = control.get('version')?.value;
-  //   });
-  //   return selectedDependencies;
-  // }
-
   validatePeerDeps(peerDeps: any) {
     if (!Object.keys(peerDeps).length) return [];
     const issues: string[] = [];
@@ -310,23 +302,6 @@ export class DependencyManagerComponent implements OnInit {
     });
     return issues;
   }
-  checkPeerDependencies(results: any[]): string[] {
-    const errorMessages: string[] = [];
-    results.forEach((result, index) => {
-      const peerDependencies = result.peerDependencies || {};
-      Object.keys(peerDependencies).forEach((peerDep) => {
-        const peerVersion = peerDependencies[peerDep];
-        const depValue =
-          this.dependenciesForm.get('dependencies')?.value[peerDep];
-        if (!semver.satisfies(depValue, peerVersion)) {
-          this.errorMessages.push(
-            `Peer dependency conflict: ${results[index].name} requires ${peerDep} ${peerVersion}`
-          );
-        }
-      });
-    });
-    return errorMessages;
-  }
 
   versionValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
@@ -348,25 +323,7 @@ export class DependencyManagerComponent implements OnInit {
       }
       return null;
     };
-    //   const validations = forkJoin({
-    //     unmetPeerDependencies: this.updateAndValidatePeerDependencies(control)
-    //   }).pipe(map((errors:ValidationErrors)=>{
-    //     return errors.unmetPeerDependecies ? errors : null
-    //   }))
 
-    //   validations.subscribe((errors)=>{
-    //     if(errors?.unmetPeerDependencies){
-    //       console.log('validation errors:',errors);
-    //       if(errors.unmetPeerDependencies !== null){
-    //         control.get('version')?.setErrors(errors);
-    //         control.get('version')?.markAsTouched();
-    //       }else{
-    //         control.get('version')?.setErrors(null);
-    //         control.get('version')?.markAsTouched();
-    //       }
-    //     }
-    //   });
-    //   return validations
   }
   updateAndValidatePeerDependencies(control: AbstractControl) {
     const peerDeps = this.dependencyService.getPackageVersion(
@@ -384,15 +341,7 @@ export class DependencyManagerComponent implements OnInit {
     this.router.navigate([], { fragment: evt || '' });
   }
   getAvailableVersionsList(name: string) {
-    return this.dependencyService.getPackageVersions(name).pipe(
-      take(1),
-      map((versions) => {
-        if (versions && versions.versions)
-          return Object.keys(versions.versions).sort((a, b) =>
-            semver.rcompare(a, b)
-          );
-      })
-    );
+    return this.dependencyService.getAvailableVersionsList(name)
   }
   getDepsList(name: string, version: string,type:'peerDependencies'|'dependencies'|'devDependencies'="peerDependencies") {
     const info = this.dependencyService.getPackageVersion(name, version);
@@ -442,8 +391,13 @@ export class DependencyManagerComponent implements OnInit {
       duration: 1000,
     });
   }
-  onPackageAdded(added:any){
-    this.addDependency(added.name,added.version,this.dependenciesForm.get('dependencies') as FormArray,'dependencies');
+  async onPackageAdded(name:any){
+    const available = await firstValueFrom(this.getAvailableVersionsList(name))
+    if(available){
+      const latest = available[0];
+      this.addDependency(name.name,latest,this.dependenciesForm.get('dependencies') as FormArray,'dependencies');
+      console.log('package added', name,latest)
+    }
   }
   async audit(){
     console.log('audit start')

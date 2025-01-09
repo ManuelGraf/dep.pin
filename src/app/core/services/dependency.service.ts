@@ -53,6 +53,19 @@ export class DependencyService {
 
     return undefined
   }
+
+  getAvailableVersionsList(name: string) {
+    return this.getPackageVersions(name).pipe(
+      take(1),
+      map((versions) => {
+        if (versions && versions.versions)
+          return Object.keys(versions.versions).sort((a, b) =>
+            semver.rcompare(a, b)
+          );
+      })
+    );
+  }
+
   // getPackageVersionInfo(dep:string,version:string):Promise<PackageJson|undefined>{
   //   return of(this.getFromCache(dep,version)).toPromise();
   // }

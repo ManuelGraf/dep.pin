@@ -1,4 +1,4 @@
-<mat-toolbar color="primary" class="header">
+<mat-toolbar color="primary" class="header animate-gradient" [ngClass]="{'pause-animation':isLoading}">
   <!-- https://jossef.github.io/material-design-icons-iconfont/ -->
   <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
   <input type="file" (change)="onFileSelected($event)" />

@@ -93,3 +93,27 @@
   top:-0.3em;
   transform: translate3d(-43%,0,0);
 }
+
+/* Define the gradient animation */
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Target the element with the class that triggers the animation */
+.animate-gradient {
+  background: linear-gradient(90deg, orange, red, purple);
+  background-size: 200% 200%; /* Ensure the gradient moves */
+  animation: gradientAnimation 5s ease infinite; /* Adjust duration as needed */
+}
+
+.pause-animation{
+  animation-play-state: paused;
+}
