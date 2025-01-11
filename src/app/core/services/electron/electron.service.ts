@@ -3,6 +3,7 @@ import * as childProcess from 'child_process';
 import { ipcRenderer, webFrame } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PackageJson } from '../dependency.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,25 +16,14 @@ export class ElectronService {
   path!: typeof path;
 
   constructor() {
-    // Conditional imports
     if (this.isElectron) {
       this.ipcRenderer = (window as any).require('electron').ipcRenderer;
       this.webFrame = (window as any).require('electron').webFrame;
       this.fs = (window as any).require('fs');
-      this.path = (window as any).require('path'); 
+      this.path = (window as any).require('path');
       this.childProcess = (window as any).require('child_process');
 
-      this.childProcess.exec('node -v', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`error: ${error.message}`);
-          return;
-        }
-        if (stderr) {
-          console.error(`stderr: ${stderr}`);
-          return;
-        }
-        console.log(`stdout:\n${stdout}`);
-      });
+      this.logNodeAndNpmVersions();
     }
   }
 
@@ -41,84 +31,137 @@ export class ElectronService {
     return !!(window && window.process && window.process.type);
   }
 
-  ensureTempDirectoryExists(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      // Use Electron's userData path to store temp files
-      this.ipcRenderer.invoke('get-user-data-path').then((userDataPath: string) => {
-        const tempFolderPath = this.path.join(userDataPath, 'temp');
+  private logNodeAndNpmVersions(): void {
+    this.childProcess.exec('node -v', (error, stdout) => {
+      if (error) {
+        console.error('Node version check failed:', error.message);
+      } else {
+        console.log('Node version:', stdout.trim());
+      }
+    });
 
-        if (!this.fs.existsSync(tempFolderPath)) {
-          this.fs.mkdirSync(tempFolderPath, { recursive: true });
-          console.log('Temp directory created:', tempFolderPath);
-        }
-
-        resolve(tempFolderPath);
-      }).catch((error) => {
-        console.error('Failed to get userData path:', error);
-        reject(error);
-      });
+    this.childProcess.exec('npm -v', (error, stdout) => {
+      if (error) {
+        console.error('NPM version check failed:', error.message);
+      } else {
+        console.log('NPM version:', stdout.trim());
+      }
     });
   }
 
-  /**
-   * 
-   * @param jsonData saves a temporary package json and runs npm audit
-   * @returns 
-   */
-  runNpmAuditWithJson(jsonData: any): Promise<string> {
+  ensureTempDirectoryExists(): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.ensureTempDirectoryExists().then((tempDirectory) => {
-        const tempPackageJsonPath = this.path.join(tempDirectory, 'package.json');
-        const tempPackageLockPath = this.path.join(tempDirectory, 'package-lock.json');
-        // remove scripts
-        const cleanPackage = JSON.parse(JSON.stringify(jsonData));
-        delete cleanPackage.scripts;
-        console.log('run audit for',cleanPackage);
-        // Write the provided JSON data to the temporary package.json
-        this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
-          if (writeError) {
-            console.error('Failed to write temporary package.json:', writeError);
-            reject(writeError);
-            return;
+      this.ipcRenderer.invoke('get-user-data-path')
+        .then((userDataPath: string) => {
+          const tempFolderPath = this.path.join(userDataPath, 'temp');
+          if (!this.fs.existsSync(tempFolderPath)) {
+            this.fs.mkdirSync(tempFolderPath, { recursive: true });
+            console.log('Temp directory created:', tempFolderPath);
           }
+          resolve(tempFolderPath);
+        })
+        .catch((error) => {
+          console.error('Failed to get userData path:', error);
+          reject(error);
+        });
+    });
+  }
 
-          // Run npm install to generate the package-lock.json file
-          this.childProcess.exec(`npm install --package-lock-only`, { cwd: tempDirectory }, (installError, installStdout, installStderr) => {
-            if (installError) {
-              console.error(`Failed to generate package-lock.json: ${installError.message}`);
-              reject(installError.message);
+  private cleanupTempFiles(files: string[]): void {
+    files.forEach((filePath) => {
+      this.fs.unlink(filePath, (error) => {
+        if (error) {
+          console.error(`Failed to delete ${filePath}:`, error);
+        } else {
+          console.log(`Deleted temporary file: ${filePath}`);
+        }
+      });
+    });
+  }
+  removeFileDependencies(pkg:PackageJson){
+    const ret  = pkg;
+    const regexp = /file:/gi; 
+    if(ret.dependencies){
+      for (const [key,value] of Object.entries(ret.dependencies)) {
+        if(regexp.test(value)){
+          console.log('removed file dependency '+value);
+          delete ret.dependencies[key]
+        } 
+      }
+    }
+    if(ret.devDependencies){
+      for (const [key,value] of Object.entries(ret.devDependencies)) {
+        if(regexp.test(value)) delete ret.devDependencies[key]
+      }
+    }
+    if(ret.peerDependencies){
+      for (const [key,value] of Object.entries(ret.peerDependencies)) {
+        if(regexp.test(value)) delete ret.peerDependencies[key]
+      }
+    }
+    return ret;
+  }
+  runNpmAuditWithJson(jsonData: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.ensureTempDirectoryExists()
+        .then((tempDirectory) => {
+          const tempPackageJsonPath = this.path.join(tempDirectory, 'package.json');
+          const tempPackageLockPath = this.path.join(tempDirectory, 'package-lock.json');
+          const cleanPackage = { ...jsonData };
+          delete cleanPackage.scripts;
+          this.removeFileDependencies(cleanPackage as PackageJson)
+  
+          console.log('Writing temporary package.json...',cleanPackage);
+          this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
+            if (writeError) {
+              console.error('Failed to write package.json:', writeError);
+              reject(writeError);
               return;
             }
-
-            // After generating package-lock.json, run npm audit
-            this.childProcess.exec(`npm audit --json`, { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
-              if (auditError) {
-                console.error(`Audit error: ${auditError.message}`);
-                reject(auditError.message);
-              } else if (auditStderr) {
-                console.error(`Audit stderr: ${auditStderr}`);
-                reject(auditStderr);
-              } else {
-                resolve(JSON.parse(auditStdout));
+  
+            console.log('Running npm install...');
+            this.childProcess.exec('npm install --package-lock-only --force', { cwd: tempDirectory }, (installError, installStdout) => {
+              if (installError) {
+                console.error('npm install failed:', installError.message);
+                this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
+                reject(installError.message);
+                return;
               }
-
-              // Clean up the temporary files
-              this.fs.unlink(tempPackageJsonPath, (unlinkJsonError) => {
-                if (unlinkJsonError) {
-                  console.error('Failed to delete temporary package.json:', unlinkJsonError);
-                }
-              });
-              this.fs.unlink(tempPackageLockPath, (unlinkLockError) => {
-                if (unlinkLockError) {
-                  console.error('Failed to delete temporary package-lock.json:', unlinkLockError);
+              console.log('npm install output:', installStdout);
+  
+              console.log('Running npm audit...');
+              this.childProcess.exec('npm audit --json', { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
+                this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
+  
+                if (auditStdout) {
+                  try {
+                    const auditResult = JSON.parse(auditStdout);
+                    resolve(auditResult);
+                  } catch (parseError) {
+                    console.error('Failed to parse npm audit output:', parseError);
+                    reject(parseError);
+                  }
+                } else if (auditError) {
+                  console.warn('npm audit reported vulnerabilities:', auditError.message);
+                  try {
+                    const auditResult = JSON.parse(auditError.message);
+                    resolve(auditResult);
+                  } catch (parseError) {
+                    console.error('Failed to parse npm audit error message:', parseError);
+                    reject(auditError.message);
+                  }
+                } else {
+                  console.error('npm audit returned no output.');
+                  reject(new Error('No output from npm audit.'));
                 }
               });
             });
           });
+        })
+        .catch((error) => {
+          console.error('Failed to ensure temp directory:', error);
+          reject(error);
         });
-      }).catch((error) => {
-        reject(error);
-      });
     });
   }
-}
+  }

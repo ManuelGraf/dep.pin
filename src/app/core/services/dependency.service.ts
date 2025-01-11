@@ -1,22 +1,21 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { map, Observable, of, take } from 'rxjs';
+import { Observable, ReplaySubject } from 'rxjs';
+import { map } from 'rxjs/operators';
 import * as semver from 'semver';
 
-
-export interface Dependencies{
-  [key: string]: string
+export interface Dependencies {
+  [key: string]: string;
 }
-export interface PackageVersionsResponse  {
-  "_id":string,
-  "_rev":string,
-  name:string,
-  description:string,
-  versions?:{[key:string]:PackageJson},
-  keywords?:string,
-  author?:string
+export interface PackageVersionsResponse {
+  "_id": string;
+  "_rev": string;
+  name: string;
+  description: string;
+  versions?: { [key: string]: PackageJson };
+  keywords?: string;
+  author?: string;
 }
-
 export interface PackageJson {
   name?: string;
   version?: string;
@@ -24,73 +23,85 @@ export interface PackageJson {
   devDependencies?: Dependencies;
   peerDependencies?: Dependencies;
 }
-export interface VersionCache{[key:string]:PackageVersionsResponse}
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
-
-
 export class DependencyService {
-  package?: PackageJson;
-  cache:VersionCache = {};
+  private cache: { [key: string]: PackageVersionsResponse } = {};
+  private subjects: { [key: string]: ReplaySubject<PackageVersionsResponse> } = {};
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getPackageVersions(packageName: string): Observable<PackageVersionsResponse> {
-    if(this.cache[packageName]) return of(this.cache[packageName]).pipe(take(1))
-      return this.http.get<PackageVersionsResponse>(`https://registry.npmjs.org/${packageName}`).pipe(take(1),map(((versions:PackageVersionsResponse)=>{this.cache[packageName] = versions; return versions})));
-  }
-  getPackageVersion(name:string,versionrange:string){
-    if(!this.cache[name]) return undefined;
-
-    const versions = this.cache[name].versions;
-    if(versions){
-
-      const suitable = semver.maxSatisfying(Object.keys(versions),versionrange);
-      return versions[suitable || '']
+    // Return the same subject if it already exists
+    if (this.subjects[packageName]) {
+      return this.subjects[packageName].asObservable();
     }
 
-    return undefined
+    // Create a new ReplaySubject for the package
+    const subject = new ReplaySubject<PackageVersionsResponse>(1);
+    this.subjects[packageName] = subject;
+
+    // If the package is cached, emit it and complete the subject
+    if (this.cache[packageName]) {
+      subject.next(this.cache[packageName]);
+      subject.complete();
+    } else {
+      // Otherwise, fetch from the registry and cache the result
+      this.http.get<PackageVersionsResponse>(`https://registry.npmjs.org/${packageName}`)
+        .pipe(
+          map((response) => {
+            this.cache[packageName] = response; // Cache the response
+            return response;
+          })
+        )
+        .subscribe({
+          next: (response) => {
+            subject.next(response); // Emit the response to the subject
+            subject.complete(); // Complete the subject
+          },
+          error: (err) => {
+            console.error('Error fetching package versions for', packageName, err);
+            subject.error(err); // Pass the error to subscribers
+          },
+        });
+    }
+
+    return subject.asObservable();
   }
 
-  getAvailableVersionsList(name: string) {
-    return this.getPackageVersions(name).pipe(
-      take(1),
-      map((versions) => {
-        if (versions && versions.versions)
-          return Object.keys(versions.versions).sort((a, b) =>
-            semver.rcompare(a, b)
-          );
-      })
+  getPackageVersion(name: string, versionRange: string): PackageJson | undefined {
+    const versions = this.cache[name]?.versions;
+    if (versions) {
+      const suitable = semver.maxSatisfying(Object.keys(versions), versionRange);
+      return versions[suitable || ''];
+    }
+    return undefined;
+  }
+
+  getAvailableVersionsListFromCache(name: string): string[]|null {
+    const versions = this.cache[name];
+    if (versions && versions.versions)
+      return Object.keys(versions.versions).sort((a, b) => semver.rcompare(a, b));
+    return null
+
+  }
+
+  findMostSuitableVersionFromList(
+    availableVersions: string[],
+    versionRange: string
+  ): string | null {
+    const suitableVersions = availableVersions.filter((version) =>
+      semver.satisfies(version, versionRange)
     );
+    const mostSuitableVersion = semver.maxSatisfying(
+      suitableVersions,
+      versionRange
+    );
+    return mostSuitableVersion || null;
   }
 
-  // getPackageVersionInfo(dep:string,version:string):Promise<PackageJson|undefined>{
-  //   return of(this.getFromCache(dep,version)).toPromise();
-  // }
-  // getFromCache(dep:string,version:string):PackageJson|undefined{
-  //   const versions = this.cache[dep]?.versions;
-  //   if(versions){
-  //     console.log('from cache:',versions[version])
-  //     return versions[version];
-  //   }
-  //   return undefined;
-  // }
-  // addToCache(name:string,versions:PackageVersionsResponse){
-  //   this.cache[name] = versions;
-  // }
-  // cache(name:string,version:string,package:PackageJson){
-  // }
-  
-  // getAllPeerDependencies(selectedDependencies:Dependencies): Observable<any> {
-  //   if(this.cache[dep]?.versions[version]) return of(this.cache[dep].versions[version])
-    
-  //   const requests = Object.keys(selectedDependencies).map(dep => 
-  //     this.http.get(`https://registry.npmjs.org/${dep}/${selectedDependencies[dep]}`)
-  //   );
-  //   return forkJoin(requests);
-  // }
 
   parsePackageJson(fileContent: string): object {
     return JSON.parse(fileContent) as object;

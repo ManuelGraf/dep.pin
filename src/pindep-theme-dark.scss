@@ -181,15 +181,73 @@ $palettes: (
       700: #f4e3ee,
       800: #f4e3ee,
       900: #f4e3ee
+    ),
+    ),
+    Red: (
+      50: #ffe9ee,
+      100: #ffc8d2,
+      200: #f98f97,
+      300: #f3606f,
+      400: #ff2a4a,
+      500: #ff002c,
+      600: #f6002d,
+      700: #e40027,
+      800: #d8001f,
+      900: #c80012,
+      A100:#e3b9d6,
+      A200:#e3b9d6,
+      A300:#e3b9d6,
+      A400:#e3b9d6,
+      A700:#e3b9d6,
+      contrast: (
+        50: black,
+        100: black,
+        200: black,
+        300: black,
+        400: white,
+        500: white,
+        600: white,
+        700: white,
+        800: white,
+        900: white
+      )  
+    ),
+    Orange: (
+      50: #fffee7,
+      100: #fefac3,
+      200: #fdf79a,
+      300: #fbf270,
+      400: #f8ee4c,
+      500: #f5e923,
+      600: #ffdf2a,
+      700: #fec61f,
+      800: #feae13,
+      900: #fc8300,
+      A100:#e3b9d6,
+      A200:#e3b9d6,
+      A300:#e3b9d6,
+      A400:#e3b9d6,
+      A700:#e3b9d6,
+      contrast: (
+        50: black,
+        100: black,
+        200: black,
+        300: black,
+        400: white,
+        500: white,
+        600: white,
+        700: white,
+        800: white,
+        900: white
     )
   )
 );
 
 
 // Light theme palettes
-$my-light-primary: mat.define-palette(map.get($palettes,Primary));
+$my-light-primary: mat.define-palette(map.get($palettes,Orange));
 $my-light-accent: mat.define-palette(map.get($palettes,Triadic2));
-$my-light-warn: mat.define-palette(map.get($palettes,Complementary));
+$my-light-warn: mat.define-palette(map.get($palettes,Red));
 
 // Light theme
 $my-light-theme: mat.define-light-theme((
@@ -225,8 +283,3 @@ $my-dark-theme: mat.define-dark-theme((
   )
 ));
 
-
-// Create a light theme class for switching
-.body-light-theme {
-  @include mat.all-component-themes($my-light-theme);
-}

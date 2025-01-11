@@ -13,7 +13,7 @@ import {
 } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, map } from 'rxjs';
 import * as semver from 'semver';
 import { ClipboardService } from '../../clipboard.service';
 import { ElectronService } from '../../core/services';
@@ -30,6 +30,7 @@ import {
   templateUrl: './dependency-manager.component.html',
   styleUrls: ['./dependency-manager.component.scss'],
 })
+
 export class DependencyManagerComponent implements OnInit {
   dependenciesForm!: FormGroup;
   errorMessages: string[] = [];
@@ -37,10 +38,11 @@ export class DependencyManagerComponent implements OnInit {
   package: PackageJson | null = null;
   showPackage: boolean = false;
   auditResults: string = "";
-
+  state = new BehaviorSubject<string>('Idle');
+  
   constructor(
     private fb: FormBuilder,
-    private dependencyService: DependencyService,
+    public dependencyService: DependencyService,
     private electron:ElectronService,
     private snackBar: MatSnackBar,
     private router: Router,
@@ -48,7 +50,7 @@ export class DependencyManagerComponent implements OnInit {
   ) {
     (window as any).form = this.dependenciesForm;
   }
-
+  
   ngOnInit(): void {
     this.dependenciesForm = this.fb.group({
       dependencies: this.fb.array([]),
@@ -56,7 +58,10 @@ export class DependencyManagerComponent implements OnInit {
     });
     (window as any).deps = this.dependenciesForm.get('dependencies');
   }
-
+  setState(state:string){
+    this.state.next(state);
+  }
+  
   get countDependencies() {
     return Object.keys(this.package?.dependencies || {}).length;
   }
@@ -112,6 +117,7 @@ export class DependencyManagerComponent implements OnInit {
   addDependencies(dependencies: Dependencies, type: string): void {
     const formArray = this.dependenciesForm.get('dependencies') as FormArray;
     Object.keys(dependencies).forEach((dep) => {
+
       this.addDependency(dep, dependencies[dep], formArray, type);
     });
     // formArray.updateValueAndValidity();
@@ -127,146 +133,24 @@ export class DependencyManagerComponent implements OnInit {
       {
         name: [name],
         version: [version],
-        isLoading: [true],
         type: [type],
       },
-      { validators: [this.versionValidator()], updateOn: 'blur' }
+      { validators: [], updateOn: 'blur' }
     );
-
+    if(version.includes('file:')) return;
     formArray.push(dependencyGroup);
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     // let versions = await lastValueFrom( this.dependencyService.getPackageVersions(name));
     // this.dependencyService.addToCache(name,versions);
 
-    this.getAvailableVersionsList(name).subscribe((versions) => {
-      const mostsuitableFixedVersion = this.findMostSuitableVersionFromList(
-        versions || [],
-        version
-      );
-      dependencyGroup.get('version')?.setValue(mostsuitableFixedVersion);
-      dependencyGroup.get('isLoading')?.setValue(false);
-    });
   }
 
-  findMostSuitableVersionFromList(
-    availableVersions: string[],
-    versionRange: string
-  ): string | null {
-    const suitableVersions = availableVersions.filter((version) =>
-      semver.satisfies(version, versionRange)
-    );
-    const mostSuitableVersion = semver.maxSatisfying(
-      suitableVersions,
-      versionRange
-    );
-    return mostSuitableVersion || null;
-  }
 
   // async getPeerDependencies(name:string,version:string){
   //   const ret = await this.dependencyService.getPackageVersionInfo(name,version);
   //   return ret?.peerDependencies || {};
   // }
 
-  peerDepCount(name: string, version: string) {
-    return this.getDepsList(name, version,'peerDependencies').length;
-  }
-  depCount(name: string, version: string) {
-    return this.getDepsList(name, version,'dependencies').length;
-  }
-  devDepCount(name: string, version: string) {
-    return this.getDepsList(name, version,'devDependencies').length;
-  }
-
-
-  async updatePatch(ctrl: FormControl) {
-    const name = ctrl.get('name')?.value;
-    const versionControl = ctrl.get('version');
-    const availableVersions = await firstValueFrom(
-      this.getAvailableVersionsList(name)
-    );
-    const currentVersion = versionControl?.value;
-    if (availableVersions && availableVersions.length) {
-      const validVersions = availableVersions?.filter(
-        (v) => semver.valid(v) && semver.satisfies(v, `~${currentVersion}`)
-      );
-      const highestPatch = semver.maxSatisfying(
-        validVersions,
-        `~${versionControl?.value}`
-      );
-      versionControl?.setValue(highestPatch || null,{ emitEvent: true });
-      this.onVersionChange(ctrl,null);
-    }
-  }
-  async updateMinor(ctrl: AbstractControl) {
-    const name = ctrl.get('name')?.value;
-    const versionControl = ctrl.get('version');
-
-    const availableVersions = await firstValueFrom(
-      this.getAvailableVersionsList(name)
-    );
-    const currentVersion = versionControl?.value;
-
-    if (availableVersions && availableVersions.length) {
-      const validVersions = availableVersions.filter(
-        (v) => semver.valid(v) && semver.satisfies(v, `^${currentVersion}`)
-      );
-      const highestMinor = semver.maxSatisfying(
-        validVersions,
-        `^${currentVersion}`
-      );
-      versionControl?.setValue(highestMinor || null,{ emitEvent: true });
-
-    }
-  }
-  async updateLatest(ctrl: AbstractControl) {
-    const name = ctrl.get('name')?.value;
-    const versionControl = ctrl.get('version');
-
-    const availableVersions = await firstValueFrom(
-      this.getAvailableVersionsList(name)
-    );
-    const currentVersion = versionControl?.value;
-    if (availableVersions && availableVersions.length) {
-      const sortedVersions = availableVersions.sort(semver.rcompare);
-      versionControl?.setValue(sortedVersions[0] || currentVersion,{ emitEvent: true });
-
-    }
-  }
-  /**
-   * updates a control to the next major version, latest
-   * @param versionControl the FormArray containing version and name
-   * @param availableVersions
-   * @returns
-   */
-  async updateMajor(ctrl: AbstractControl) {
-    const name = ctrl.get('name')?.value;
-    const versionControl = ctrl.get('version');
-    const currentVersion = versionControl?.value;
-    const currentMajor = semver.major(currentVersion);
-    const availableVersions = await firstValueFrom(
-      this.getAvailableVersionsList(name)
-    );
-    if (availableVersions && availableVersions.length) {
-      const nextMajorVersions = availableVersions.filter(
-        (v) => semver.valid(v) && semver.major(v) > currentMajor
-      );
-
-      if (nextMajorVersions.length === 0) {
-        return null;
-      }
-      const nextMajor = Math.min(
-        ...nextMajorVersions.map((v) => semver.major(v))
-      );
-      const validNextMajorVersions = nextMajorVersions.filter(
-        (v) => semver.major(v) === nextMajor
-      );
-      const highestNextMajorVersion = semver.maxSatisfying(
-        validNextMajorVersions,
-        '*'
-      );
-      versionControl?.setValue(highestNextMajorVersion,{ emitEvent: true });
-    }
-  }
 
   onVersionChange(dep: FormControl, evt: any) {
     console.log('version change', dep.value, evt);
@@ -341,22 +225,15 @@ export class DependencyManagerComponent implements OnInit {
     this.router.navigate([], { fragment: evt || '' });
   }
   getAvailableVersionsList(name: string) {
-    return this.dependencyService.getAvailableVersionsList(name)
-  }
-  getDepsList(name: string, version: string,type:'peerDependencies'|'dependencies'|'devDependencies'="peerDependencies") {
-    const info = this.dependencyService.getPackageVersion(name, version);
-    const arr: PackageJson[] = [];
-    if (info && info[type]) {
-      Object.keys(info?.[type] || {}).forEach((key:string,index:number) => {
-        arr.push({
-          name: key,
-          version: info?.[type]?.[key]
-        });
-      });
-    }
-    return arr;
+    return this.dependencyService.getPackageVersions(name).pipe(
+      map((versions) => {
+        if (versions && versions.versions)
+          return Object.keys(versions.versions).sort((a, b) => semver.rcompare(a, b));
+      })
+    );
   }
   updatePackageJson() {
+    this.setState('update Package Json')
     for (const dep of (this.dependenciesForm.get('dependencies') as FormArray)
       .controls) {
       const name = dep.get('name')?.value;
@@ -380,6 +257,8 @@ export class DependencyManagerComponent implements OnInit {
           break;
       }
     }
+    this.setState('updated Package Json')
+
     console.log('updated json', JSON.stringify(this.package));
   }
   getDepForm():FormArray{
@@ -400,8 +279,17 @@ export class DependencyManagerComponent implements OnInit {
     }
   }
   async audit(){
-    console.log('audit start')
-    this.auditResults = await this.electron.runNpmAuditWithJson(this.package);
+    console.log('audit start');
+    this.setState('run audit');
+    
+    this.isLoading = true;
+    try{
+      this.auditResults = await this.electron.runNpmAuditWithJson(this.package);
+    }catch(e){
+      console.warn(e);
+    }
+    this.isLoading = false;
     console.log('audit end',this.auditResults)
+    this.setState('audit finished')
   }
 }

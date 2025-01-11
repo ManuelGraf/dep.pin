@@ -1,9 +1,15 @@
 @use '@angular/material' as mat;
-@use './pindep-theme-dark' as theme;
+
+.spacer{
+  flex:1 1 100%
+}
 
 .package{
   display:flex;
   position: relative;
+  &__title{
+    font-size:150%;
+  }
   .version{
     flex: 0 0 30%;
   }
@@ -23,21 +29,8 @@
 .package-wrapper{
   position:relative;
 }
-.version{
-
-}
 .errors{
   white-space: pre-wrap;
-}
-.loader{
-  flex:0 0 64px;
-  position:absolute;
-  background: var(--mdc-dialog-container-color);
-  display:flex;
-  width: 100%;
-  height:100%;
-  justify-content: center;
-  align-items: center;
 }
 
 .dependencies{flex:1 1 100%}
@@ -57,19 +50,6 @@
 .json{
 
 
-}
-.warn {
-  color: mat.get-color-from-palette(theme.$my-dark-warn);
-  .mat-expansion-panel-header-title {
-    color: mat.get-color-from-palette(theme.$my-dark-warn, 500)!important; 
-  }
-  .mat-panel-description {
-    color: mat.get-color-from-palette(theme.$my-dark-warn, 500)!important; 
-  }
-  
-  .my-custom-panel .mat-expansion-panel-content {
-    background-color: mat.get-color-from-palette(theme.$my-dark-warn, 50); // Optional background color
-  }
 }
 
 .dependencies{
@@ -94,26 +74,30 @@
   transform: translate3d(-43%,0,0);
 }
 
-/* Define the gradient animation */
-@keyframes gradientAnimation {
+@keyframes gradient-loop {
   0% {
     background-position: 0% 50%;
   }
-  50% {
-    background-position: 100% 50%;
-  }
   100% {
-    background-position: 0% 50%;
+    background-position: -200% 50%;
   }
 }
 
-/* Target the element with the class that triggers the animation */
 .animate-gradient {
-  background: linear-gradient(90deg, orange, red, purple);
-  background-size: 200% 200%; /* Ensure the gradient moves */
-  animation: gradientAnimation 5s ease infinite; /* Adjust duration as needed */
+  background: linear-gradient(90deg, orange, red, purple, orange);
+  background-size: 200%; /* Creates the seamless effect */
+  animation: gradient-loop 10s linear infinite;
+  animation-play-state:paused;
+}
+.play-animation{
+  animation-play-state:running;
 }
 
-.pause-animation{
-  animation-play-state: paused;
+.state{
+  width:100vw;
+  position:fixed;
+  bottom:0;
+  display:flex;
+  justify-content: center;
+  align-items: center;
 }

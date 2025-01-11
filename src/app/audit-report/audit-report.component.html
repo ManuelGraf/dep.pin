@@ -1,9 +1,126 @@
   <div class="audit-report">
     <mat-card-title><h3>Vulnerabilities</h3></mat-card-title>
     <div class="vulnerabilities">
-      <div class="vulnerability vulnerability--critical">{{report.metadata?.vulnerabilities?.critical}} CRIT</div>
-      <div class="vulnerability vulnerability--high">{{report.metadata?.vulnerabilities?.high}} HIGH</div>
-      <div class="vulnerability vulnerability--medium">{{report.metadata?.vulnerabilities?.moderate}} MODERATE</div>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header  class="mat-warn">
+          <mat-panel-title> <strong>Critical</strong> 
+          </mat-panel-title>
+          <mat-panel-description> 
+            <mat-icon color="warn" class="mat-warn" *ngIf="report.metadata?.vulnerabilities?.critical" fontIcon="error"></mat-icon> 
+            <mat-icon color="accent" class="mat-accent" *ngIf="!report.metadata?.vulnerabilities?.critical" fontIcon="check_circle"></mat-icon> 
+            {{ report.metadata?.vulnerabilities?.critical }}
+          </mat-panel-description>  
+        </mat-expansion-panel-header>
+        <div class="vulnerability vulnerability--critical">
+          <mat-expansion-panel *ngFor="let vuln of vulns.critical">
+            <mat-expansion-panel-header >
+              <mat-panel-title> 
+                {{vuln.name}}  {{vuln.isDirect ? '(direct)' : ''}} 
+              </mat-panel-title>
+              <mat-panel-description> 
+                {{ vuln.range }}
+                <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>  
+              </mat-panel-description>      
+            </mat-expansion-panel-header>
+            <ng-container>
+                <div *ngFor="let node of vuln.via">
+                  <p *ngIf="node.title; else isString">
+                      <a [href]="node.url">{{node.title}}</a>
+                  </p>
+                  <ng-template #isString>
+                    {{node}}
+                  </ng-template>
+                </div>
+                <p *ngIf="vuln.fixAvailable; else noFix">
+                  <mat-icon fontIcon="construction"></mat-icon> 
+                  fix available in {{vuln.fixAvailable.name}} {{vuln.fixAvailable.version}}
+                </p>
+                <ng-template #noFix><p class="no-fix text-warn"> no fix found</p></ng-template>
+            </ng-container>
+          </mat-expansion-panel>
+        </div>
+      </mat-expansion-panel>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header class="mat-warn">
+          <mat-panel-title> 
+            High 
+          </mat-panel-title>
+          <mat-panel-description>
+            <mat-icon class="peer-warning mat-warn" *ngIf="report.metadata?.vulnerabilities?.high" fontIcon="error"></mat-icon>
+            <mat-icon color="accent" class="mat-accent" *ngIf="!report.metadata?.vulnerabilities?.high" fontIcon="check_circle"></mat-icon>   
+            {{ report.metadata?.vulnerabilities?.high }}
+          </mat-panel-description>  
+        </mat-expansion-panel-header>
+        <div class="vulnerability vulnerability--high">
+          <mat-expansion-panel *ngFor="let vuln of vulns.high">
+            <mat-expansion-panel-header >
+              <mat-panel-title> 
+                {{vuln.name}}  {{vuln.isDirect ? '(direct)' : ''}} 
+              </mat-panel-title>
+              <mat-panel-description> 
+                {{ vuln.range }}
+                <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>  
+              </mat-panel-description>      
+            </mat-expansion-panel-header>
+            <ng-container>
+                <div *ngFor="let node of vuln.via">
+                  <p *ngIf="node.title; else isString">
+                      <a [href]="node.url">{{node.title}}</a>
+                  </p>
+                  <ng-template #isString>
+                    {{node}}
+                  </ng-template>
+                </div>
+                <p *ngIf="vuln.fixAvailable; else noFix">
+                  <mat-icon fontIcon="construction"></mat-icon> 
+                  fix available in {{vuln.fixAvailable.name}} {{vuln.fixAvailable.version}}
+                </p>
+                <ng-template #noFix><p class="no-fix text-warn"> no fix found</p></ng-template>
+            </ng-container>
+          </mat-expansion-panel>
+        </div>
+      </mat-expansion-panel>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title> 
+            Moderate 
+          </mat-panel-title>
+          <mat-panel-description> 
+            <mat-icon *ngIf="report.metadata?.vulnerabilities?.moderate" fontIcon="error"></mat-icon>
+            <mat-icon color="accent" class="mat-accent" *ngIf="!report.metadata?.vulnerabilities?.moderate" fontIcon="check_circle"></mat-icon>  
+            {{ report.metadata?.vulnerabilities?.moderate }}
+          </mat-panel-description>  
+        </mat-expansion-panel-header>
+        <div class="vulnerability vulnerability--moderate">
+          <mat-expansion-panel *ngFor="let vuln of vulns.moderate">
+            <mat-expansion-panel-header >
+              <mat-panel-title> 
+                {{vuln.name}}  {{vuln.isDirect ? '(direct)' : ''}} 
+              </mat-panel-title>
+              <mat-panel-description> 
+                {{ vuln.range }}
+                <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>  
+              </mat-panel-description>      
+            </mat-expansion-panel-header>
+            <ng-container>
+                <div *ngFor="let node of vuln.via">
+                  <p *ngIf="node.title; else isString">
+                      <a [href]="node.url">{{node.title}}</a>
+                  </p>
+                  <ng-template #isString>
+                    {{node}}
+                  </ng-template>
+                </div>
+                <p *ngIf="vuln.fixAvailable; else noFix">
+                  <mat-icon fontIcon="construction"></mat-icon> 
+
+                  fix available in {{vuln.fixAvailable.name}} {{vuln.fixAvailable.version}}
+                </p>
+                <ng-template #noFix><p class="no-fix text-warn"> no fix found</p></ng-template>
+            </ng-container>
+          </mat-expansion-panel>
+        </div>
+      </mat-expansion-panel>
     </div>
 
   </div>

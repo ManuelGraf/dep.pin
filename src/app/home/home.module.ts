@@ -17,9 +17,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AuditReportComponent } from '../audit-report/audit-report.component';
 import { PackageAutocompleteComponent } from '../package-autocomplete/package-autocomplete.component';
+import { PackageInfoComponent } from '../package-info/package-info.component';
 import { SharedModule } from '../shared/shared.module';
 import { DependencyManagerComponent } from './dependency-manager/dependency-manager.component';
 import { HomeComponent } from './home.component';
@@ -29,7 +31,8 @@ import { HomeComponent } from './home.component';
     HomeComponent,
     DependencyManagerComponent,
     PackageAutocompleteComponent,
-    AuditReportComponent
+    AuditReportComponent,
+    PackageInfoComponent
   ],
   imports: [CommonModule, SharedModule,HomeRoutingModule,
     BrowserAnimationsModule,
@@ -46,7 +49,9 @@ import { HomeComponent } from './home.component';
     MatChipsModule,
     MatExpansionModule,
     MatIconModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
+    MatTooltipModule,
+    MatToolbarModule
     
   ]
 })

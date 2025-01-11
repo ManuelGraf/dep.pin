@@ -1,0 +1,108 @@
+<div class="package-wrapper" *ngIf="dep">
+
+<div class="loader" *ngIf="isLoading">
+  <mat-spinner diameter="24" ></mat-spinner>
+</div>
+<mat-card-header>
+  <mat-card-title><h3>{{ name }}</h3>
+  </mat-card-title>
+
+</mat-card-header>
+  <mat-card-content>
+
+<div class="package dependency">
+  <div class="version" *ngIf="dep.get('version')">
+    <mat-form-field>
+      <mat-label>Version</mat-label>
+      <mat-select [formControl]="versionControl" (change)="onVersionChange(dep,$event)">
+        <mat-option *ngFor="let version of availableVersions" [value]="version">
+          {{ version }}
+        </mat-option>
+      </mat-select>
+      <mat-error>
+      </mat-error>
+    </mat-form-field>
+    <div class="version-control">
+      <button mat-stroked-button color="accent" type="submit" (click)="updatePatch(dep)">~ Patch</button>
+      <button mat-stroked-button color="accent" type="submit" (click)="updateMinor(dep)">^ Minor</button>
+      <button mat-stroked-button color="accent" type="submit" (click)="updateMajor(dep)">+ Major</button>
+      <button mat-stroked-button color="accent" type="submit" (click)="updateLatest(dep)">* latest</button>
+    </div>
+  </div>
+  <div class="dependencies">
+    <mat-accordion class="dep" *ngIf="depCount(dep.get('name').value,dep.get('version').value)">
+      <mat-expansion-panel hideToggle>
+        <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
+          <mat-panel-title> Dependencies </mat-panel-title>
+          <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
+          <mat-panel-description> {{ depCount(dep.get('name').value,dep.get('version').value) }} </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="peerdep__details">
+          <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+            <mat-chip 
+              *ngFor="let dependency of getDepsList(dep.get('name').value, dep.get('version').value,'dependencies')"  
+              clickable 
+              (click)="jumpToDep(dependency.name!)">
+              {{ dependency.name }} &#64; {{ dependency.version }}
+            </mat-chip>
+          </mat-chip-set>                    
+          <div class="errors">
+            {{dep.errors?.unmetDependencies}}
+          </div>
+        </div>
+
+      </mat-expansion-panel>
+    </mat-accordion>
+    <mat-accordion class="devdep" *ngIf="devDepCount(dep.get('name').value,dep.get('version').value)">
+      <mat-expansion-panel hideToggle>
+        <mat-expansion-panel-header [ngClass]="{'warn':dep.errors?.unmetDevDependencies}">
+          <mat-panel-title> Dev Dependencies </mat-panel-title>
+          <mat-panel-description> 
+            {{ devDepCount(dep.get('name').value,dep.get('version').value) }} 
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="peerdep__details">
+          <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+            <mat-chip [ngClass]="{'mat-warn': dep.errors?.unmetDevDependencies?.includes(dep.get('name').value)}" 
+              *ngFor="let devdep of getDepsList(dep.get('name').value, dep.get('version').value,'devDependencies')"  
+              clickable 
+              (click)="jumpToDep(devdep.name!)">
+              {{ devdep.name }} &#64; {{ devdep.version }}
+            </mat-chip>
+          </mat-chip-set>                    <div class="errors">
+            {{dep.errors?.unmetDevDependencies}}
+          </div>
+        </div>
+
+      </mat-expansion-panel>
+    </mat-accordion>
+    <mat-accordion class="peerdep" *ngIf="peerDepCount(dep.get('name').value,dep.get('version').value)">
+      <mat-expansion-panel [ngClass]="{'warn':dep.errors?.unmetPeerDependencies}" hideToggle>
+        <mat-expansion-panel-header>
+          <mat-panel-title> Peer Dependencies </mat-panel-title>
+          <mat-panel-description class="mat-warn"> 
+            {{ peerDepCount(dep.get('name').value,dep.get('version').value) }} 
+            <mat-icon class="mat-warn" *ngIf="dep.errors?.unmetPeerDependencies" fontIcon="warning"></mat-icon>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="peerdep__details">
+          <mat-chip-set class="details mat-mdc-chip-set-stacked" aria-label="Peer Dependency List">
+            <mat-chip  [ngClass]="{'mat-warn': dep.errors?.unmetPeerDependencies?.includes(dep.get('name').value)}"
+              *ngFor="let peerdep of getDepsList(dep.get('name').value, dep.get('version').value,'peerDependencies')"  
+              clickable 
+              (click)="jumpToDep(peerdep.name!)">
+              {{ peerdep.name }} &#64; {{ peerdep.version }}
+            </mat-chip>
+          </mat-chip-set>                    <div class="errors">
+            {{dep.errors?.unmetPeerDependencies}}
+          </div>
+        </div>
+
+      </mat-expansion-panel>
+    </mat-accordion>
+  </div>
+</div>
+</mat-card-content>
+</div>
+
+

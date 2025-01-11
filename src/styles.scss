@@ -4,13 +4,30 @@
 
 $theme: theme.$my-light-theme;
 
+
 html{
+  color-scheme: light dark;
   @include mat.typography-hierarchy(mat.define-typography-config());
   @include mat.all-component-themes($theme);
 }
+.body-dark-theme {
+  @include mat.all-component-themes(theme.$my-dark-theme);
+}
+
 /* You can add global styles to this file, and also import other style files */
 // Define the theme object.
 
+.text-warn {
+  color: mat.get-color-from-palette(theme.$my-light-warn);
+}
+
+.text-primary {
+  color: mat.get-color-from-palette(theme.$my-light-primary);
+}
+
+.text-accent {
+  color: mat.get-color-from-palette(theme.$my-light-accent);
+}
 html, body {
   margin: 0;
   padding: 0;
