@@ -258,9 +258,9 @@ $my-light-theme: mat.define-light-theme((
 ));
 
 // Dark theme palettes
-$my-dark-primary: mat.define-palette(map.get($palettes,Triadic1Dark));
+$my-dark-primary: mat.define-palette(map.get($palettes,Orange));
 $my-dark-accent: mat.define-palette(map.get($palettes,Triadic2));
-$my-dark-warn: mat.define-palette(map.get($palettes,Complementary));
+$my-dark-warn: mat.define-palette(map.get($palettes,Red));
 $text-color: map.get($my-dark-primary,50);
 // $dark-typography: mat-typography-config(
 //   $font-family: ('monospace, Roboto'),

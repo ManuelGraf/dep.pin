@@ -2,7 +2,9 @@
 @use './pindep-theme-dark' as theme;
 @include mat.core();
 
+
 $theme: theme.$my-light-theme;
+
 
 
 html{
@@ -12,11 +14,15 @@ html{
 }
 .body-dark-theme {
   @include mat.all-component-themes(theme.$my-dark-theme);
+  color:var(--mat-app-text-color);
 }
 
 /* You can add global styles to this file, and also import other style files */
 // Define the theme object.
 
+a{
+  color:#6b82bb;
+}
 .text-warn {
   color: mat.get-color-from-palette(theme.$my-light-warn);
 }
@@ -40,17 +46,26 @@ html{
   white-space: nowrap;
   flex-shrink: 0;
 }
-
 html, body {
   margin: 0;
   padding: 0;
 
-  height: 100%;
   background: var(--mat-app-background-color);
 }
 
-html, body { height: 100%; }
+html, body { min-height: 100%;height:100% }
+body{height:auto}
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+.empty{
+  mat-icon{
+    font-size: 50px;
+    height: 50px ;
+    width: 50px ;
+  }
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity:.1
+}

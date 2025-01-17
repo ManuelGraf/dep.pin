@@ -15,7 +15,7 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { BehaviorSubject, firstValueFrom, map, Subject, takeUntil } from 'rxjs';
+import { firstValueFrom, map, Subject, takeUntil } from 'rxjs';
 import * as semver from 'semver';
 import { AuditReport } from '../../audit-report/audit-report.component';
 import { ClipboardService } from '../../clipboard.service';
@@ -25,6 +25,7 @@ import {
   DependencyService,
   PackageJson,
 } from '../../core/services/dependency.service';
+import { StateService } from '../../state.service';
 import { UpdateReport } from '../../update-report/update-report.component';
 // Define the structure of dependencies and package.json
 
@@ -44,11 +45,13 @@ export class DependencyManagerComponent implements OnInit {
   auditErrors?: any;
   updateResults?: UpdateReport;
   updateErrors?: any;
-  state = new BehaviorSubject<string>('Idle');
   cancelSubscriptions$ = new Subject<any>();
   readonly dialog = inject(MatDialog);
   dialogRef: any;
   isFileDraggedOver: boolean = false;
+  get stateAction(){
+    return this.state.getCurrentAction()
+  }
 
   constructor(
     private fb: FormBuilder,
@@ -57,6 +60,7 @@ export class DependencyManagerComponent implements OnInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private clipboard: ClipboardService,
+    public state:StateService,
     @Inject(DOCUMENT) private document: Document
   ) {
     (window as any).form = this.dependenciesForm;
@@ -88,7 +92,7 @@ export class DependencyManagerComponent implements OnInit {
     (window as any).deps = this.dependenciesForm.get('dependencies');
   }
   setState(state: string) {
-    this.state.next(state);
+    this.state.info(state);
   }
 
   get countDependencies() {
@@ -125,10 +129,10 @@ export class DependencyManagerComponent implements OnInit {
       );
       console.log(isJson);
       if (!isJson) {
-        this.setState('Invalid file type detected');
+        this.state.start('Invalid file type detected');
         this.isFileDraggedOver = false;
       } else {
-        this.setState('Drag over detected');
+        this.state.end('Invalid file type detected');
         this.isFileDraggedOver = true;
       }
     }
@@ -140,7 +144,6 @@ export class DependencyManagerComponent implements OnInit {
       this.isFileDraggedOver = false;
       event.preventDefault();
       event.stopPropagation();
-      this.setState('File dropped');
       if (event.dataTransfer?.files.length) {
         const file = event.dataTransfer.files[0];
         if (file.type === 'application/json') {
@@ -169,6 +172,8 @@ export class DependencyManagerComponent implements OnInit {
     this.clearDependencies();
     this.addDependencies(packageJson.dependencies || {}, 'dependency');
     this.addDependencies(packageJson.devDependencies || {}, 'devDependency');
+    this.state.clear();
+    this.setState('package.json loaded.')
     this.isLoading = false;
     this.snackBar.open('package loaded', 'Close', {
       duration: 5000,
@@ -310,7 +315,7 @@ export class DependencyManagerComponent implements OnInit {
     );
   }
   updatePackageJson() {
-    this.setState('update Package Json');
+    this.state.start('update Package Json');
     for (const dep of (this.dependenciesForm.get('dependencies') as FormArray)
       .controls) {
       const name = dep.get('name')?.value;
@@ -328,20 +333,20 @@ export class DependencyManagerComponent implements OnInit {
           if (this.package?.dependencies?.hasOwnProperty(name))
             this.package.dependencies[name] = version;
           break;
-        case 'devDependency':
-          if (this.package?.devDependencies?.hasOwnProperty(name))
-            this.package.devDependencies[name] = version;
-          break;
+          case 'devDependency':
+            if (this.package?.devDependencies?.hasOwnProperty(name))
+              this.package.devDependencies[name] = version;
+            break;
+          }
+        }
+        this.state.end('update Package Json');
+        
+        console.log('updated json', JSON.stringify(this.package));
       }
-    }
-    this.setState('updated Package Json');
-
-    console.log('updated json', JSON.stringify(this.package));
-  }
-  getDepForm(): FormArray {
-    return this.dependenciesForm.get('dependencies') as FormArray;
-  }
-  copyJsonToClipboard() {
+      getDepForm(): FormArray {
+        return this.dependenciesForm.get('dependencies') as FormArray;
+      }
+      copyJsonToClipboard() {
     this.clipboard.copyToClipboard(this.package);
     this.snackBar.open('coped to Clipboard', 'close', {
       duration: 1000,
@@ -362,7 +367,7 @@ export class DependencyManagerComponent implements OnInit {
   }
   async audit() {
     console.log('audit start');
-    this.setState('run audit');
+    this.state.start('npm audit is running...')
     this.isAuditRunning = true;
     this.auditErrors = null;
     this.isLoading = true;
@@ -375,24 +380,25 @@ export class DependencyManagerComponent implements OnInit {
     }
     this.isLoading = false;
     console.log('audit end', this.auditResults);
-    this.setState('audit finished');
+    this.state.end('npm audit is running...')
     this.isAuditRunning = false;
   }
   update() {
     this.isLoading = true;
     this.updateResults = undefined;
     this.updateErrors = null;
-    this.setState('checking for updates...');
+    this.state.start('checking for updates...')
+    
     this.electron
-      .runNpmCheckUpdates(this.package)
-      .then((result) => {
-        this.updateResults = result;
-        this.isLoading = false;
-        this.setState('updates found');
-      })
-      .catch((e) => {
-        this.setState('update failed: ' + e);
-      });
+    .runNpmCheckUpdates(this.package)
+    .then((result) => {
+      this.updateResults = result;
+      this.isLoading = false;
+      this.state.end('checking for updates...')
+    })
+    .catch((e) => {
+      this.state.end('checking for updates...')
+    });
   }
 
   ngOnDestroy(): void {

@@ -1,6 +1,9 @@
 <mat-toolbar color="primary" class="header animate-gradient" [ngClass]="{'play-animation':isLoading}">
   <!-- https://jossef.github.io/material-design-icons-iconfont/ -->
   <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
+  <div class="state" [ngClass]="{'is-loading':state.getCurrentAction() === 'start'}">
+    {{state.getCurrentMessage()}}
+  </div>
   <input type="file" (change)="onFileSelected($event)" />
 
 </mat-toolbar>
@@ -16,7 +19,6 @@
   </div>
   <form [formGroup]="dependenciesForm">
     <mat-card *ngIf="package">
-      <mat-card-header>
         <mat-toolbar>
           <span class="package__title">{{ package?.name }} &#64; {{package?.version}}
           </span>
@@ -45,7 +47,6 @@
             <mat-icon>content_copy</mat-icon>
           </button>
         </mat-toolbar>
-      </mat-card-header>
       <mat-card-content>
         <div class="package__analysis">
           <div class="col2">
@@ -78,8 +79,9 @@
         </div>
       </mat-card-content>
     </mat-card>
-    <mat-card *ngFor="let dep of $any(dependenciesForm.get('dependencies')).controls" [id]="dep.get('name').value">
-      <mat-accordion>
+    <mat-card >
+      <mat-card-content>
+      <mat-accordion *ngFor="let dep of $any(dependenciesForm.get('dependencies')).controls" [id]="dep.get('name').value">
         <mat-expansion-panel hideToggle>
           <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
             <mat-panel-title> {{dep.get('name').value}} </mat-panel-title>
@@ -95,14 +97,12 @@
           </ng-template>
         </mat-expansion-panel>
       </mat-accordion>
+      </mat-card-content>
     </mat-card>
   </form>
   <mat-card>
     <app-package-autocomplete *ngIf="package" (added)=onPackageAdded($event)></app-package-autocomplete>
   </mat-card>
-  <div class="state">
-    {{state | async}}
-  </div>
   <!-- <div class="splash animate-gradient">
     <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
   </div> -->

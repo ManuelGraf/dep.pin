@@ -4,6 +4,7 @@ import { ipcRenderer, webFrame } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuditReport } from '../../../audit-report/audit-report.component';
+import { StateService } from '../../../state.service';
 import { PackageJson } from '../dependency.service';
 
 @Injectable({
@@ -16,7 +17,7 @@ export class ElectronService {
   fs!: typeof fs;
   path!: typeof path;
 
-  constructor() {
+  constructor(private state:StateService) {
     if (this.isElectron) {
       this.ipcRenderer = (window as any).require('electron').ipcRenderer;
       this.webFrame = (window as any).require('electron').webFrame;
@@ -79,7 +80,7 @@ export class ElectronService {
       });
     });
   }
-
+  /** filters a package json for file urls and deletes the dependency */
   removeFileDependencies(pkg: PackageJson) {
     const ret = pkg;
     const regexp = /file:/gi;
@@ -115,7 +116,9 @@ export class ElectronService {
           this.removeFileDependencies(cleanPackage as PackageJson);
 
           console.log('Writing temporary package.json...', cleanPackage);
+          this.state.start('writing package...')
           this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
+            this.state.end('writing package...')
             if (writeError) {
               console.error('Failed to write package.json:', writeError);
               reject(writeError);
@@ -123,8 +126,9 @@ export class ElectronService {
             }
 
             console.log('Running npm install...');
-
-            this.childProcess.exec('npm install --package-lock-only --force', { cwd: tempDirectory }, (installError, installStdout) => {
+            this.state.start('run npm install...')
+            this.childProcess.exec('npm install --package-lock-only', { cwd: tempDirectory }, (installError, installStdout) => {
+              this.state.end('run npm install...')
               if (installError) {
                 console.error('npm install failed:', installError.message);
                 this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
@@ -134,7 +138,9 @@ export class ElectronService {
               console.log('npm install output:', installStdout);
 
               console.log('Running npm audit...');
+              this.state.start('run npm audit')
               this.childProcess.exec('npm audit --json', { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
+                this.state.end('run npm audit')
                 this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
 
                 if (auditStdout) {

@@ -23,7 +23,9 @@ export interface UpdateRow {
 export class UpdateReportComponent implements OnInit {
   @Input() package?: PackageJson;
   @Input() report?: UpdateReport;
-
+  get count(){
+    return this.dataSource.data.length;
+  }
   displayedColumns: string[] = ['package', 'before', 'after', 'update'];
   dataSource = new MatTableDataSource<UpdateRow>();
 
