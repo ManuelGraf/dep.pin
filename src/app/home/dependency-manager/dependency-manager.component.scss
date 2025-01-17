@@ -1,7 +1,44 @@
 @use '@angular/material' as mat;
 
+.drop-area{
+  mat-icon{
+    font-size: 50px;
+    height: 50px ;
+    width: 50px ;
+  }
+  width:100%;
+  height:80vh;
+  color: #ccc;
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.actions{
+  display:flex;
+}
+.action-button{
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.big-icon{
+    font-size: 50px;
+    height: 50px ;
+    width: 50px ;
+}
 .spacer{
   flex:1 1 100%
+}
+.placeholder{
+  height:200px;
+  width:100%;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+}
+.col2{
+  flex:1 1 50%;
+  position:relative;
 }
 
 .package{
@@ -9,6 +46,11 @@
   position: relative;
   &__title{
     font-size:150%;
+  }
+  &__analysis{
+    display:flex;
+    flex-wrap:wrap;
+    position:relative;
   }
   .version{
     flex: 0 0 30%;

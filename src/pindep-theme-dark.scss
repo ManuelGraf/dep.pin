@@ -212,35 +212,31 @@ $palettes: (
         900: white
       )  
     ),
-    Orange: (
-      50: #fffee7,
-      100: #fefac3,
-      200: #fdf79a,
-      300: #fbf270,
-      400: #f8ee4c,
-      500: #f5e923,
-      600: #ffdf2a,
-      700: #fec61f,
-      800: #feae13,
-      900: #fc8300,
-      A100:#e3b9d6,
-      A200:#e3b9d6,
-      A300:#e3b9d6,
-      A400:#e3b9d6,
-      A700:#e3b9d6,
-      contrast: (
-        50: black,
-        100: black,
-        200: black,
-        300: black,
-        400: white,
-        500: white,
-        600: white,
-        700: white,
-        800: white,
-        900: white
-    )
+Orange: (
+  50: #fff4db, // Lighter tone of orange
+  100: #ffe3b2, // Slightly darker
+  200: #ffd180, // Darker still
+  300: #ffbe4d, // Medium-dark
+  400: #ffaa26, // Approaching darker tones
+  500: #ff9700, // Primary shade
+  600: #e68800, // Slightly darker
+  700: #cc7800, // Darker orange
+  800: #b36800, // Even darker
+  900: #804600, // Very dark orange
+  contrast: (
+    50: black,
+    100: black,
+    200: black,
+    300: black,
+    400: white,
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white
   )
+),
+
 );
 
 

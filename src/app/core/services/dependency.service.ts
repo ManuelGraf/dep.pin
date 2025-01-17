@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, ReplaySubject } from 'rxjs';
+import { Observable, ReplaySubject, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import * as semver from 'semver';
 
@@ -30,6 +30,11 @@ export interface PackageJson {
 export class DependencyService {
   private cache: { [key: string]: PackageVersionsResponse } = {};
   private subjects: { [key: string]: ReplaySubject<PackageVersionsResponse> } = {};
+  /**
+   * Used to change the selected version in dependency manager from the outside
+   */
+  public setPackageVersionSelection$ = new Subject<{name:string,version:string}>();
+  
 
   constructor(private http: HttpClient) {}
 

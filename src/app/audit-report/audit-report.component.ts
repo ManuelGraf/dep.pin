@@ -1,5 +1,6 @@
 import { Component, Input, SimpleChanges } from '@angular/core';
-interface Breach{
+import { DependencyService } from '../core/services/dependency.service';
+export interface Breach{
   cvss?:{score:number,vectorString:string},
   cwe?:string[],
   dependency:string,
@@ -10,7 +11,7 @@ interface Breach{
   title?:string,
   url?:string
 }
-interface Vulnerability{
+export interface Vulnerability{
   effects?:[],
   fixAvailable?:{isSemVerMajor:boolean,name:string,version:string},
   isDirect?:boolean,
@@ -21,7 +22,7 @@ interface Vulnerability{
   via: [Breach]
 
 }
-interface AuditReport {
+export interface AuditReport {
   auditReportVersion?: string, 
   vulnerabilities?: Record<string, Vulnerability>;
   metadata?: { 
@@ -44,20 +45,23 @@ interface AuditReport {
     } 
 }
 
-type Severity = 'critical' | 'low' | 'high' | 'moderate';
+export type Severity = 'critical' | 'low' | 'high' | 'moderate';
 
 @Component({
   selector: 'app-audit-report',
   templateUrl: './audit-report.component.html',
+  styleUrls: ['./audit-report.component.scss'],
+
 })
 export class AuditReportComponent {
-  @Input() report: AuditReport = {};
+  @Input() report?: AuditReport = {};
   vulns: Record<Severity, Vulnerability[]> = {
     critical: [],
     low: [],
     high: [],
     moderate: [],
   };
+  constructor(private dependencyService:DependencyService){}
 
   ngOnChanges(changes: SimpleChanges): void {
     const report = changes['report']?.currentValue as AuditReport;
@@ -72,7 +76,9 @@ export class AuditReportComponent {
       }
     }
   }
-
+  fixAll(){
+    console.log('implemnt me');
+  }
   resetVulnerabilities(): void {
     this.vulns = {
       critical: [],
@@ -80,6 +86,11 @@ export class AuditReportComponent {
       high: [],
       moderate: [],
     };
+  }
+
+  fixVersion(name:string,version:string){
+    console.log('fix version',name,version)
+    this.dependencyService.setPackageVersionSelection$.next({name,version});
   }
 
   isSeverity(severity: string): severity is Severity {

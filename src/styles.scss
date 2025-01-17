@@ -28,6 +28,19 @@ html{
 .text-accent {
   color: mat.get-color-from-palette(theme.$my-light-accent);
 }
+
+.green{
+  color:#11a466;
+}
+.flex-space{
+  flex: 1 1 100%;
+}
+// used to have regular buttons in a toolbar like way without labels wrapping
+.action-button{
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 html, body {
   margin: 0;
   padding: 0;

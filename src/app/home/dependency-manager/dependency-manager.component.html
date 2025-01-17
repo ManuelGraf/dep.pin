@@ -2,8 +2,18 @@
   <!-- https://jossef.github.io/material-design-icons-iconfont/ -->
   <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
   <input type="file" (change)="onFileSelected($event)" />
+
 </mat-toolbar>
 <div style="margin: 20px;">
+  <div class="drop-area" *ngIf="!package">
+     <ng-container *ngIf="!isFileDraggedOver,else accept">
+       <p><mat-icon class="big-icon" fontIcon="description"></mat-icon></p>
+       <p>drag & drop a valid package.json file here</p>
+      </ng-container>
+      <ng-template #accept>
+       <mat-icon class="green big-icon" fontIcon="add_circle"></mat-icon>
+     </ng-template>
+  </div>
   <form [formGroup]="dependenciesForm">
     <mat-card *ngIf="package">
       <mat-card-header>
@@ -21,11 +31,15 @@
           </button>
           <button 
             mat-icon-button 
+            [disabled]="isAuditRunning"
             aria-label="npm audit" 
             matTooltip="audit"
             (click)="audit()"
           >
             <mat-icon>spellcheck</mat-icon>
+          </button>
+          <button matTooltip="check updates" mat-icon-button aria-label="npm update" (click)="update()">
+            <mat-icon>upgrade</mat-icon>
           </button>
           <button matTooltip="Copy JSON" mat-icon-button aria-label="copy package.json to clipboard" (click)="copyJsonToClipboard()">
             <mat-icon>content_copy</mat-icon>
@@ -33,21 +47,35 @@
         </mat-toolbar>
       </mat-card-header>
       <mat-card-content>
-        <p>
-          
-        </p>
-        <div>
-          <ng-container *ngIf="auditResults">
-            <mat-card-content>
+        <div class="package__analysis">
+          <div class="col2">
+            <ng-container *ngIf="updateResults || updateErrors, else loader">
+              <app-update-report [package]="package" [report] = "updateResults">
+              </app-update-report>
+              <ng-container *ngIf="updateErrors">
+                {{auditErrors}}
+              </ng-container>
+            </ng-container>
+          </div>
+          <div class="col2">
+            <ng-container *ngIf="(auditResults && auditResults.vulnerabilities) || (auditErrors), else loader">
               <app-audit-report [report]="auditResults">
               </app-audit-report>
-            </mat-card-content>
-          </ng-container>
+              <ng-container *ngIf="auditErrors">
+                {{auditErrors}}
+              </ng-container>
+            </ng-container>
+          </div>
+          <ng-template #loader>
+            <div class="placeholder">
+              <app-loading-spinner></app-loading-spinner>
+            </div>
+          </ng-template>
+          
         </div>
         <div class="json" *ngIf="showPackage">
           <pre>{{package | json}}</pre>
         </div>
-        <mat-progress-spinner  color="accent" *ngIf="isLoading"></mat-progress-spinner>
       </mat-card-content>
     </mat-card>
     <mat-card *ngFor="let dep of $any(dependenciesForm.get('dependencies')).controls" [id]="dep.get('name').value">

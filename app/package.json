@@ -1,5 +1,6 @@
 {
-  "name": "npm-ui",
+  "name": "dep.pin",
+  "version":"1.0.0",
   "description": "Peer Dependency checker for package.json files",
   "author": {
     "name": "Manuel Graf",
@@ -9,6 +10,7 @@
   "main": "main.js",
   "private": true,
   "dependencies": {
-    "@angular/material": "^17.3.10"
+    "@angular/material": "^17.3.10",
+    "npm-check-updates": "^17.0.0"
   }
 }

@@ -3,6 +3,7 @@ import * as childProcess from 'child_process';
 import { ipcRenderer, webFrame } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { AuditReport } from '../../../audit-report/audit-report.component';
 import { PackageJson } from '../dependency.service';
 
 @Injectable({
@@ -78,30 +79,32 @@ export class ElectronService {
       });
     });
   }
-  removeFileDependencies(pkg:PackageJson){
-    const ret  = pkg;
-    const regexp = /file:/gi; 
-    if(ret.dependencies){
-      for (const [key,value] of Object.entries(ret.dependencies)) {
-        if(regexp.test(value)){
-          console.log('removed file dependency '+value);
-          delete ret.dependencies[key]
-        } 
+
+  removeFileDependencies(pkg: PackageJson) {
+    const ret = pkg;
+    const regexp = /file:/gi;
+    if (ret.dependencies) {
+      for (const [key, value] of Object.entries(ret.dependencies)) {
+        if (regexp.test(value)) {
+          console.log('Removed file dependency ' + value);
+          delete ret.dependencies[key];
+        }
       }
     }
-    if(ret.devDependencies){
-      for (const [key,value] of Object.entries(ret.devDependencies)) {
-        if(regexp.test(value)) delete ret.devDependencies[key]
+    if (ret.devDependencies) {
+      for (const [key, value] of Object.entries(ret.devDependencies)) {
+        if (regexp.test(value)) delete ret.devDependencies[key];
       }
     }
-    if(ret.peerDependencies){
-      for (const [key,value] of Object.entries(ret.peerDependencies)) {
-        if(regexp.test(value)) delete ret.peerDependencies[key]
+    if (ret.peerDependencies) {
+      for (const [key, value] of Object.entries(ret.peerDependencies)) {
+        if (regexp.test(value)) delete ret.peerDependencies[key];
       }
     }
     return ret;
   }
-  runNpmAuditWithJson(jsonData: any): Promise<any> {
+
+  runNpmAuditWithJson(jsonData: any): Promise<AuditReport> {
     return new Promise((resolve, reject) => {
       this.ensureTempDirectoryExists()
         .then((tempDirectory) => {
@@ -109,17 +112,18 @@ export class ElectronService {
           const tempPackageLockPath = this.path.join(tempDirectory, 'package-lock.json');
           const cleanPackage = { ...jsonData };
           delete cleanPackage.scripts;
-          this.removeFileDependencies(cleanPackage as PackageJson)
-  
-          console.log('Writing temporary package.json...',cleanPackage);
+          this.removeFileDependencies(cleanPackage as PackageJson);
+
+          console.log('Writing temporary package.json...', cleanPackage);
           this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
             if (writeError) {
               console.error('Failed to write package.json:', writeError);
               reject(writeError);
               return;
             }
-  
+
             console.log('Running npm install...');
+
             this.childProcess.exec('npm install --package-lock-only --force', { cwd: tempDirectory }, (installError, installStdout) => {
               if (installError) {
                 console.error('npm install failed:', installError.message);
@@ -128,14 +132,14 @@ export class ElectronService {
                 return;
               }
               console.log('npm install output:', installStdout);
-  
+
               console.log('Running npm audit...');
               this.childProcess.exec('npm audit --json', { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
                 this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
-  
+
                 if (auditStdout) {
                   try {
-                    const auditResult = JSON.parse(auditStdout);
+                    const auditResult = JSON.parse(auditStdout) as AuditReport;
                     resolve(auditResult);
                   } catch (parseError) {
                     console.error('Failed to parse npm audit output:', parseError);
@@ -144,7 +148,7 @@ export class ElectronService {
                 } else if (auditError) {
                   console.warn('npm audit reported vulnerabilities:', auditError.message);
                   try {
-                    const auditResult = JSON.parse(auditError.message);
+                    const auditResult = JSON.parse(auditError.message) as AuditReport;
                     resolve(auditResult);
                   } catch (parseError) {
                     console.error('Failed to parse npm audit error message:', parseError);
@@ -164,4 +168,72 @@ export class ElectronService {
         });
     });
   }
+
+  runNpmUpdate(packageName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.ensureTempDirectoryExists()
+        .then((tempDirectory) => {
+          console.log(`Running npm update for package: ${packageName}...`);
+          this.childProcess.exec(`npm update ${packageName}`, { cwd: tempDirectory }, (error, stdout, stderr) => {
+            if (error) {
+              console.error(`Failed to update package ${packageName}:`, error.message);
+              reject(error);
+              return;
+            }
+            console.log(`npm update output for ${packageName}:`, stdout);
+            resolve();
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to ensure temp directory:', error);
+          reject(error);
+        });
+    });
   }
+  runNpmCheckUpdates(jsonData: any): Promise<Record<string, string>> {
+    return new Promise((resolve, reject) => {
+      this.ensureTempDirectoryExists()
+        .then((tempDirectory) => {
+          const tempPackageJsonPath = this.path.join(tempDirectory, 'package.json');
+          const cleanPackage = { ...jsonData };
+          delete cleanPackage.scripts;
+          this.removeFileDependencies(cleanPackage as PackageJson);
+  
+          console.log('Writing temporary package.json...', cleanPackage);
+          this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
+            if (writeError) {
+              console.error('Failed to write package.json:', writeError);
+              reject(writeError);
+              return;
+            }
+  
+            console.log('Running npm-check-updates (ncu)...');
+            this.childProcess.exec('npx npm-check-updates --jsonUpgraded', { cwd: tempDirectory }, (ncuError, ncuStdout, ncuStderr) => {
+              if (ncuError) {
+                console.error('npm-check-updates failed:', ncuError.message);
+                console.error('ncu stderr:', ncuStderr.trim());
+                reject(new Error(`npm-check-updates error: ${ncuError.message}`));
+                return;
+              }
+  
+              try {
+                const ncuResult = JSON.parse(ncuStdout);
+                console.log('npm-check-updates result:', ncuResult);
+                resolve(ncuResult);
+              } catch (parseError) {
+                console.error('Failed to parse npm-check-updates output:', parseError);
+                console.error('Raw output:', ncuStdout.trim());
+                reject(new Error('Invalid JSON output from npm-check-updates.'));
+              }
+            });
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to ensure temp directory:', error);
+          reject(error);
+        });
+    });
+  }
+  
+
+}

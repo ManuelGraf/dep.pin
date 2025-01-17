@@ -11,28 +11,34 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatGridListModule } from '@angular/material/grid-list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AuditReportComponent } from '../audit-report/audit-report.component';
+import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.component';
 import { PackageAutocompleteComponent } from '../package-autocomplete/package-autocomplete.component';
 import { PackageInfoComponent } from '../package-info/package-info.component';
 import { SharedModule } from '../shared/shared.module';
+import { UpdateReportComponent } from '../update-report/update-report.component';
 import { DependencyManagerComponent } from './dependency-manager/dependency-manager.component';
 import { HomeComponent } from './home.component';
-
 @NgModule({
   declarations: [
     HomeComponent,
     DependencyManagerComponent,
     PackageAutocompleteComponent,
     AuditReportComponent,
-    PackageInfoComponent
+    PackageInfoComponent,
+    UpdateReportComponent,
+    LoadingSpinnerComponent
   ],
   imports: [CommonModule, SharedModule,HomeRoutingModule,
     BrowserAnimationsModule,
@@ -51,7 +57,10 @@ import { HomeComponent } from './home.component';
     MatIconModule,
     MatAutocompleteModule,
     MatTooltipModule,
-    MatToolbarModule
+    MatToolbarModule,
+    MatGridListModule,
+    MatPaginatorModule,
+    MatTableModule
     
   ]
 })

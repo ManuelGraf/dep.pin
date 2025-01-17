@@ -1,0 +1,59 @@
+<div class="report">
+  <div class="actions">
+    <h3>Updates&nbsp;(NCU)</h3>
+    <span class="flex-space"></span>
+    <button class="action-button" mat-button color="primary" (click)="updateAll()">
+      <mat-icon fontIcon="upgrade"></mat-icon> Update All
+    </button>
+  </div>
+  <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+    <!-- Package Column -->
+    <ng-container matColumnDef="package">
+      <mat-header-cell *matHeaderCellDef> Package </mat-header-cell>
+      <mat-cell *matCellDef="let element" class="flex-cell">
+        {{ element.package }}
+      </mat-cell>
+    </ng-container>
+
+    <!-- Before Version Column -->
+    <ng-container matColumnDef="before">
+      <mat-header-cell *matHeaderCellDef> Before </mat-header-cell>
+      <mat-cell *matCellDef="let element"> {{ element.before || 'N/A' }} </mat-cell>
+    </ng-container>
+
+    <!-- After Version Column -->
+    <ng-container matColumnDef="after">
+      <mat-header-cell *matHeaderCellDef> After </mat-header-cell>
+      <mat-cell *matCellDef="let element"> {{ element.after }} </mat-cell>
+    </ng-container>
+
+    <!-- Update Column -->
+    <ng-container matColumnDef="update">
+      <mat-header-cell *matHeaderCellDef> Update </mat-header-cell>
+      <mat-cell *matCellDef="let element">
+        <button mat-icon-button color="primary" (click)="update(element.package, element.after)">
+          <mat-icon>upgrade</mat-icon>
+        </button>
+        <mat-icon
+          *ngIf="element.isMajorUpdate"
+          color="warn"
+          matTooltip="This update involves a major version change"
+          >error</mat-icon
+        >
+      </mat-cell>
+    </ng-container>
+
+    <!-- Table Headers -->
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+
+    <!-- Table Rows -->
+    <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+  </mat-table>
+
+  <!-- Paginator -->
+  <mat-paginator
+    [pageSizeOptions]="[5, 10, 20]"
+    showFirstLastButtons
+    [pageSize]="10"
+  ></mat-paginator>
+</div>

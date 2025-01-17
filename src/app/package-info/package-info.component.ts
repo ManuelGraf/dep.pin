@@ -63,7 +63,7 @@ export class PackageInfoComponent {
     }
   }
 
-  updatePatch(ctrl: FormControl) {
+  updatePatch(ctrl: AbstractControl) {
     const versionControl = ctrl.get('version');
     const currentVersion = versionControl?.value;
     if (this.availableVersions && this.availableVersions.length) {
@@ -170,6 +170,9 @@ export class PackageInfoComponent {
     return arr;
   }
 
+  jumpToDep(dep:any){
+    console.log('do stuff',dep)
+  }
 
   ngOnDestroy(): void {
     console.log('destroyed info for', this.name)
