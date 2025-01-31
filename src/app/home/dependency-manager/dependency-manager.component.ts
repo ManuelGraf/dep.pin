@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { DOCUMENT } from '@angular/common';
-import { Component, Inject, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -15,9 +15,11 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { NgScrollbar } from 'ngx-scrollbar';
 import { firstValueFrom, map, Subject, takeUntil } from 'rxjs';
 import * as semver from 'semver';
 import { AuditReport } from '../../audit-report/audit-report.component';
+import { ChangelogInfoComponent } from '../../changelog-info/changelog-info.component';
 import { ClipboardService } from '../../clipboard.service';
 import { ElectronService } from '../../core/services';
 import {
@@ -33,6 +35,7 @@ import { UpdateReport } from '../../update-report/update-report.component';
   selector: 'app-dependency-manager',
   templateUrl: './dependency-manager.component.html',
   styleUrls: ['./dependency-manager.component.scss'],
+  imports:[]
 })
 export class DependencyManagerComponent implements OnInit {
   dependenciesForm!: FormGroup;
@@ -46,12 +49,15 @@ export class DependencyManagerComponent implements OnInit {
   updateResults?: UpdateReport;
   updateErrors?: any;
   cancelSubscriptions$ = new Subject<any>();
-  readonly dialog = inject(MatDialog);
-  dialogRef: any;
   isFileDraggedOver: boolean = false;
+  isHeaderCondensed: boolean = false;
+  scrollHandle:any;
   get stateAction(){
     return this.state.getCurrentAction()
   }
+
+  @ViewChild(NgScrollbar) scrollBar!:NgScrollbar;
+  
 
   constructor(
     private fb: FormBuilder,
@@ -61,11 +67,18 @@ export class DependencyManagerComponent implements OnInit {
     private router: Router,
     private clipboard: ClipboardService,
     public state:StateService,
-    @Inject(DOCUMENT) private document: Document
+    @Inject(DOCUMENT) private document: Document,
+    private dialog: MatDialog,
   ) {
-    (window as any).form = this.dependenciesForm;
   }
-
+  ngAfterViewInit(): void {
+    //Called after ngAfterContentInit when the component's view has been initialized. Applies to components only.
+    //Add 'implements AfterViewInit' to the class.
+    this.scrollHandle = this.scrollBar.nativeElement.addEventListener('scroll',this.onScroll.bind(this));
+  }
+  onScroll(evt:any){
+    this.isHeaderCondensed = evt.target.scrollTop > 0
+  }
   ngOnInit(): void {
     this.document.addEventListener('dragover',this.onDragOver.bind(this))
     this.document.addEventListener('drop',this.onDrop.bind(this))
@@ -91,6 +104,16 @@ export class DependencyManagerComponent implements OnInit {
       });
     (window as any).deps = this.dependenciesForm.get('dependencies');
   }
+  onDroppedTop(){
+    console.log('dropped top')
+  }
+  testDialog(){
+        this.dialog.open(ChangelogInfoComponent, {
+          width: '800px',
+          data: { packageName:'@angular/core', currentVersion:'17.0.0', newVersion:'19.1.3' },
+        });
+    
+  }
   setState(state: string) {
     this.state.info(state);
   }
@@ -101,7 +124,6 @@ export class DependencyManagerComponent implements OnInit {
   get countDevDependencies() {
     return Object.keys(this.package?.devDependencies || {}).length;
   }
-
   onFileSelected(event: any): void {
     this.isLoading = true;
     const file = event.target.files[0];
@@ -167,20 +189,32 @@ export class DependencyManagerComponent implements OnInit {
     }
   }
   onPackageLoaded(e: any) {
-    const packageJson: PackageJson = JSON.parse(e.target.result);
-    this.package = packageJson;
-    this.clearDependencies();
-    this.addDependencies(packageJson.dependencies || {}, 'dependency');
-    this.addDependencies(packageJson.devDependencies || {}, 'devDependency');
-    this.state.clear();
-    this.setState('package.json loaded.')
-    this.isLoading = false;
-    this.snackBar.open('package loaded', 'Close', {
-      duration: 5000,
-      panelClass: ['snackbar'],
-    });
-    this.audit();
-    this.update();
+    try {
+      const packageJson: PackageJson = JSON.parse(e.target.result);
+      if (packageJson && typeof packageJson === 'object') {
+        this.package = packageJson;
+        this.clearDependencies();
+        this.addDependencies(packageJson.dependencies || {}, 'dependency');
+        this.addDependencies(packageJson.devDependencies || {}, 'devDependency');
+        this.setState('package.json loaded.');
+        this.snackBar.open('package loaded', 'Close', {
+          duration: 5000,
+          panelClass: ['snackbar'],
+        });
+        this.state.clear();
+        this.setState('package.json loaded.')
+        this.isLoading = false;
+        this.audit();
+        this.update();    
+    
+        this.isLoading = false;
+      }
+    } catch (error) {
+      this.snackBar.open('Invalid package.json content', 'Close', {
+        duration: 3000,
+      });
+      this.isLoading = false;
+    }
   }
 
   // async updatePeerDependencies(formGroup:AbstractControl){
@@ -321,13 +355,6 @@ export class DependencyManagerComponent implements OnInit {
       const name = dep.get('name')?.value;
       const version = dep.get('version')?.value;
       const type = dep.get('type')?.value;
-      console.log(
-        this.package?.dependencies,
-        this.package?.devDependencies,
-        name,
-        version,
-        type
-      );
       switch (type) {
         case 'dependency':
           if (this.package?.dependencies?.hasOwnProperty(name))
@@ -406,6 +433,7 @@ export class DependencyManagerComponent implements OnInit {
     //Add 'implements OnDestroy' to the class.
     this.document.removeEventListener('dragover', this.onDragOver.bind(this));
     this.document.removeEventListener('drop', this.onDrop.bind(this));
+    this.scrollBar.nativeElement.removeEventListener('scroll',this.onScroll.bind(this))
     this.cancelSubscriptions$.next(true);
     this.cancelSubscriptions$.complete();
   }

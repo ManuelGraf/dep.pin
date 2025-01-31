@@ -14,6 +14,7 @@ export interface PackageVersionsResponse {
   description: string;
   versions?: { [key: string]: PackageJson };
   keywords?: string;
+  repository?:any;
   author?: string;
 }
 export interface PackageJson {
@@ -34,7 +35,9 @@ export class DependencyService {
    * Used to change the selected version in dependency manager from the outside
    */
   public setPackageVersionSelection$ = new Subject<{name:string,version:string}>();
-  
+  public setPackageVersion(name:string,version:string){
+    this.setPackageVersionSelection$.next({name,version})
+  }
 
   constructor(private http: HttpClient) {}
 

@@ -1,7 +1,9 @@
 import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import * as semver from 'semver'; // Import semver
+import { ChangelogInfoComponent } from '../changelog-info/changelog-info.component';
 import { DependencyService, PackageJson } from '../core/services/dependency.service';
 
 export interface UpdateReport {
@@ -23,15 +25,17 @@ export interface UpdateRow {
 export class UpdateReportComponent implements OnInit {
   @Input() package?: PackageJson;
   @Input() report?: UpdateReport;
-  get count(){
+
+  get count() {
     return this.dataSource.data.length;
   }
+
   displayedColumns: string[] = ['package', 'before', 'after', 'update'];
   dataSource = new MatTableDataSource<UpdateRow>();
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
-  constructor(private dependencyService: DependencyService) {}
+  constructor(private dependencyService: DependencyService, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.updateTableData();
@@ -60,21 +64,26 @@ export class UpdateReportComponent implements OnInit {
   }
 
   removeRow(name: string): void {
-    const updatedData = this.dataSource.data.filter(row => row.package !== name);
+    const updatedData = this.dataSource.data.filter((row) => row.package !== name);
     this.dataSource.data = updatedData;
   }
 
   updateAll(): void {
-    if (confirm('Are you sure you want to update all packages?')) {
-      const dataSourceData = this.dataSource?.data; // Access the underlying data array
-      if (dataSourceData?.length) {
-        dataSourceData.forEach((element) => {
+    if (confirm('Are you sure you want to update all visible packages?')) {
+      const visibleData = this.dataSource.filteredData; // Get currently visible rows
+      if (visibleData?.length) {
+        visibleData.forEach((element) => {
           if (element.package && element.after) {
             this.update(element.package, element.after);
           }
         });
       }
     }
+  }
+
+  applyFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSource.filter = filterValue.trim().toLowerCase();
   }
 
   private updateTableData(): void {
@@ -96,6 +105,14 @@ export class UpdateReportComponent implements OnInit {
         after: value,
         isMajorUpdate,
       };
+    });
+  }
+
+  openChangelog(packageName: string, currentVersion: string | null, newVersion: string): void {
+    console.log('open changelog for %o from %o to %o', packageName,currentVersion,newVersion)
+    this.dialog.open(ChangelogInfoComponent, {
+      width: '800px',
+      data: { packageName, currentVersion, newVersion },
     });
   }
 }

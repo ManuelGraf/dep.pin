@@ -1,12 +1,16 @@
 <div class="report" *ngIf="count > 0">
   <div class="actions">
     <h3>Updates&nbsp;via&nbsp;NCU&nbsp;({{count}})</h3>
-    <span class="flex-space"></span>
-    <button *ngIf="count >0" class="action-button" mat-button color="primary" (click)="updateAll()">
+    <button *ngIf="count > 0" class="action-button" mat-button color="primary" (click)="updateAll()">
       <mat-icon fontIcon="upgrade"></mat-icon> Update All
     </button>
+    <span class="flex-space"></span>
+    <mat-form-field appearance="outline" class="filter-input">
+      <mat-label>Filter updates</mat-label>
+      <input matInput (input)="applyFilter($event)" placeholder="Filter by package name" />
+    </mat-form-field>
   </div>
-  <ng-container  *ngIf="count > 0">
+  <ng-container *ngIf="count > 0">
     <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
       <!-- Package Column -->
       <ng-container matColumnDef="package">
@@ -29,20 +33,29 @@
       </ng-container>
   
       <!-- Update Column -->
-      <ng-container matColumnDef="update">
-        <mat-header-cell *matHeaderCellDef> Update </mat-header-cell>
-        <mat-cell *matCellDef="let element">
-          <button mat-icon-button color="primary" (click)="update(element.package, element.after)">
-            <mat-icon>upgrade</mat-icon>
-          </button>
-          <mat-icon
-            *ngIf="element.isMajorUpdate"
-            color="warn"
-            matTooltip="This update involves a major version change"
-            >error</mat-icon
-          >
-        </mat-cell>
-      </ng-container>
+<!-- Update Column -->
+<ng-container matColumnDef="update">
+  <mat-header-cell *matHeaderCellDef> Update </mat-header-cell>
+  <mat-cell *matCellDef="let element">
+    <button mat-icon-button color="primary" (click)="update(element.package, element.after)">
+      <mat-icon>upgrade</mat-icon>
+    </button>
+    <mat-icon
+      *ngIf="element.isMajorUpdate"
+      color="warn"
+      matTooltip="This update involves a major version change"
+      (click)="openChangelog(element.package, element.before, element.after)">
+      error
+    </mat-icon>
+    <mat-icon
+      *ngIf="!element.isMajorUpdate"
+      matTooltip="Show changelog"
+      (click)="openChangelog(element.package, element.before, element.after)">
+      info
+    </mat-icon>
+  </mat-cell>
+</ng-container>
+
   
       <!-- Table Headers -->
       <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
@@ -62,5 +75,4 @@
     <mat-icon fontIcon="check_circle"></mat-icon>
     no updates available.
   </p>
-  
 </div>

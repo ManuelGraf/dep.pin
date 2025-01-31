@@ -105,73 +105,110 @@ export class ElectronService {
     return ret;
   }
 
-  runNpmAuditWithJson(jsonData: any): Promise<AuditReport> {
-    return new Promise((resolve, reject) => {
-      this.ensureTempDirectoryExists()
-        .then((tempDirectory) => {
-          const tempPackageJsonPath = this.path.join(tempDirectory, 'package.json');
-          const tempPackageLockPath = this.path.join(tempDirectory, 'package-lock.json');
-          const cleanPackage = { ...jsonData };
-          delete cleanPackage.scripts;
-          this.removeFileDependencies(cleanPackage as PackageJson);
+  async runNpmAuditWithJson(jsonData: any, cleanNodeModulesBeforeInstall = false): Promise<AuditReport> {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    return new Promise(async (resolve, reject) => {
 
-          console.log('Writing temporary package.json...', cleanPackage);
-          this.state.start('writing package...')
-          this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2), (writeError) => {
-            this.state.end('writing package...')
-            if (writeError) {
-              console.error('Failed to write package.json:', writeError);
-              reject(writeError);
-              return;
-            }
+      try{
+        const tempDirectory = await this.ensureTempDirectoryExists()
+        const tempPackageJsonPath = this.path.join(tempDirectory, 'package.json');
+        const tempPackageLockPath = this.path.join(tempDirectory, 'package-lock.json');
+        const cleanPackage = { ...jsonData };
+        delete cleanPackage.scripts;
+        this.removeFileDependencies(cleanPackage as PackageJson);
 
-            console.log('Running npm install...');
-            this.state.start('run npm install...')
-            this.childProcess.exec('npm install --package-lock-only', { cwd: tempDirectory }, (installError, installStdout) => {
-              this.state.end('run npm install...')
-              if (installError) {
-                console.error('npm install failed:', installError.message);
-                this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
-                reject(installError.message);
-                return;
+        console.log('Writing temporary package.json...', cleanPackage);
+        this.state.start('writing package...');
+        this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2),(e)=>{throw e});
+        if(cleanNodeModulesBeforeInstall){
+          await this.cleanNodeModules(tempDirectory);
+        }
+        console.log('Running npm install...');
+        this.state.start('run npm install...')
+        this.childProcess.exec('npm install --package-lock-only --force', { cwd: tempDirectory }, (installError, installStdout) => {
+          this.state.end('run npm install...')
+          if (installError) {
+            console.error('npm install failed:', installError.message);
+            this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
+            reject(installError.message);
+            return;
+          }
+          console.log('npm install output:', installStdout);
+
+          console.log('Running npm audit...');
+          this.state.start('run npm audit')
+          this.childProcess.exec('npm audit --json', { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
+            this.state.end('run npm audit')
+            this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
+
+            if (auditStdout) {
+              try {
+                const auditResult = JSON.parse(auditStdout) as AuditReport;
+                resolve(auditResult);
+              } catch (parseError) {
+                console.error('Failed to parse npm audit output:', parseError);
+                reject(parseError);
               }
-              console.log('npm install output:', installStdout);
-
-              console.log('Running npm audit...');
-              this.state.start('run npm audit')
-              this.childProcess.exec('npm audit --json', { cwd: tempDirectory }, (auditError, auditStdout, auditStderr) => {
-                this.state.end('run npm audit')
-                this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
-
-                if (auditStdout) {
-                  try {
-                    const auditResult = JSON.parse(auditStdout) as AuditReport;
-                    resolve(auditResult);
-                  } catch (parseError) {
-                    console.error('Failed to parse npm audit output:', parseError);
-                    reject(parseError);
-                  }
-                } else if (auditError) {
-                  console.warn('npm audit reported vulnerabilities:', auditError.message);
-                  try {
-                    const auditResult = JSON.parse(auditError.message) as AuditReport;
-                    resolve(auditResult);
-                  } catch (parseError) {
-                    console.error('Failed to parse npm audit error message:', parseError);
-                    reject(auditError.message);
-                  }
-                } else {
-                  console.error('npm audit returned no output.');
-                  reject(new Error('No output from npm audit.'));
-                }
-              });
-            });
+            } else if (auditError) {
+              console.warn('npm audit reported vulnerabilities:', auditError.message);
+              try {
+                const auditResult = JSON.parse(auditError.message) as AuditReport;
+                resolve(auditResult);
+              } catch (parseError) {
+                console.error('Failed to parse npm audit error message:', parseError);
+                reject(auditError.message);
+              }
+            } else {
+              console.error('npm audit returned no output.');
+              reject(new Error('No output from npm audit.'));
+            }
           });
-        })
-        .catch((error) => {
-          console.error('Failed to ensure temp directory:', error);
-          reject(error);
         });
+      }catch(e){
+        reject(e)
+      }
+
+  });
+}
+
+  async npmInstall(directory:string,tempPackageJsonPath:string,tempPackageLockPath:string,force = true){
+    return new Promise((resolve,reject)=>{
+      console.log('Running npm install...');
+      this.state.start('run npm install...')
+      this.childProcess.exec(`npm install --package-lock-only ${force ? '--force' : ''}`), { cwd: directory }, (installError:any, installStdout:any) => {
+        this.state.end('run npm install...')
+        if (installError) {
+          reject(installError);
+          console.error('npm install failed:', installError.message);
+          this.cleanupTempFiles([tempPackageJsonPath, tempPackageLockPath]);
+          reject(installError.message);
+          return;
+        }
+        console.log('npm install output:', installStdout);
+        resolve(installStdout)
+      }
+    });
+  }
+  async cleanNodeModules(directory:string){
+    return new Promise((resolve,reject)=>{
+      const message = 'clean up node modules...';
+      console.log(message);
+      this.state.start(message);
+      const nodeModulesPath = this.path.join(directory, 'node_modules');
+      try {
+        if (this.fs.existsSync(nodeModulesPath)) {
+          this.fs.rmSync(nodeModulesPath, { recursive: true, force: true });
+          console.log('Node modules folder removed successfully.');
+        } else {
+          console.log('Node modules folder does not exist.');
+        }
+        resolve('Node modules cleanup complete.');
+      } catch (error) {
+        console.error('Error removing node modules folder:', error);
+        reject(error);
+      } finally {
+        this.state.end(message);
+      }
     });
   }
 

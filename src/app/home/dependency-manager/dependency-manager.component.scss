@@ -1,5 +1,79 @@
 @use '@angular/material' as mat;
 
+
+.header{
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  position:fixed;
+  transition: .3s height ease-in-out;
+  z-index:10;
+  height:60px;
+  top:0;
+  box-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+
+  &.animate-gradient {
+    background: linear-gradient(90deg, orange, red, purple, orange)!important;
+    background-size: 200%; /* Creates the seamless effect */
+    animation: gradient-loop 10s linear infinite;
+    animation-play-state:paused;
+  }
+  .play-animation{
+    animation-play-state:running;
+  }
+  
+  &--scrolled{
+    height:30px;
+    .logo-type{
+      opacity: 0!important;
+      height:0;
+    }
+    .logo-icon{
+      top:-0.5em;
+    }
+    input {
+      display:none;
+    }
+  }
+}
+
+.logo{
+  position: relative;
+  display: flex;
+  justify-content: center;
+  font-weight:700;
+  margin:0;
+  .logo-type{
+    display:flex;
+    opacity:1;
+    transition: .3s opacity ease-in-out;
+  }
+  .wide{
+    padding: 0px 5px;
+    text-align: center;
+  }
+}
+.logo-icon{
+  position: absolute;
+  left:50%;
+  top:-0.3em;
+  transform: translate3d(-43%,0,0);
+}
+
+@keyframes gradient-loop {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: -200% 50%;
+  }
+}
+
+
+.package-manager{
+  padding-top:60px;
+  width:100%;
+}
 .drop-area{
   mat-icon{
     font-size: 50px;
@@ -63,11 +137,6 @@
   .version-control{
   }
 }
-.header{
-  display:flex;
-  justify-content: space-between;
-  align-items: center;
-}
 .package-wrapper{
   position:relative;
 }
@@ -98,42 +167,7 @@
   display:flex;
 }
 
-.logo{
-  position: relative;
-  display: flex;
-  justify-content: center;
-  font-weight:700;
-  margin:0;
-  .wide{
-    flex: 0 0 0.6em;
-    text-align: center;
-  }
-}
-.logo-icon{
-  position: absolute;
-  left:50%;
-  top:-0.3em;
-  transform: translate3d(-43%,0,0);
-}
 
-@keyframes gradient-loop {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: -200% 50%;
-  }
-}
-
-.animate-gradient {
-  background: linear-gradient(90deg, orange, red, purple, orange);
-  background-size: 200%; /* Creates the seamless effect */
-  animation: gradient-loop 10s linear infinite;
-  animation-play-state:paused;
-}
-.play-animation{
-  animation-play-state:running;
-}
 
 .state{
   flex: 1 1 100%;
