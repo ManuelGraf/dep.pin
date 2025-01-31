@@ -14,7 +14,7 @@
   <div class="version" *ngIf="dep.get('version')">
     <mat-form-field>
       <mat-label>Version</mat-label>
-      <mat-select [formControl]="versionControl" (change)="onVersionChange($event)">
+      <mat-select [formControl]="versionControl" (selectionChange)="onVersionChange($event)">
         <mat-option *ngFor="let version of availableVersions" [value]="version">
           {{ version }}
         </mat-option>

@@ -118,8 +118,8 @@ export class ElectronService {
         this.removeFileDependencies(cleanPackage as PackageJson);
 
         console.log('Writing temporary package.json...', cleanPackage);
-        this.state.start('writing package...');
-        this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2),(e)=>{throw e});
+        this.state.info('writing package...');
+        this.fs.writeFile(tempPackageJsonPath, JSON.stringify(cleanPackage, null, 2),(e)=>{console.warn(e)});
         if(cleanNodeModulesBeforeInstall){
           await this.cleanNodeModules(tempDirectory);
         }

@@ -58,7 +58,10 @@ export class PackageInfoComponent {
             this.availableVersions || [],
             this.version || ''
           );
-          this.version = mostsuitableFixedVersion;
+          if(mostsuitableFixedVersion){
+            this.version = mostsuitableFixedVersion;
+            this.dependencyService.setPackageVersion(this.name,mostsuitableFixedVersion )
+          }
       }
     }
   }
@@ -74,8 +77,9 @@ export class PackageInfoComponent {
         validVersions,
         `~${versionControl?.value}`
       );
-      versionControl?.setValue(highestPatch || null,{ emitEvent: true });
-      // this.onVersionChange(ctrl,null);
+      if(highestPatch){
+        this.dependencyService.setPackageVersion(this.name,highestPatch )
+      }
     }
   }
   updateMinor(ctrl: AbstractControl) {
@@ -91,7 +95,10 @@ export class PackageInfoComponent {
         validVersions,
         `^${currentVersion}`
       );
-      versionControl?.setValue(highestMinor || null,{ emitEvent: true });
+      if(highestMinor){
+        this.dependencyService.setPackageVersion(this.name,highestMinor )
+
+      }
 
     }
   }
@@ -101,7 +108,7 @@ export class PackageInfoComponent {
     const currentVersion = versionControl?.value;
     if (this.availableVersions && this.availableVersions.length) {
       const sortedVersions = this.availableVersions.sort(semver.rcompare);
-      versionControl?.setValue(sortedVersions[0] || currentVersion,{ emitEvent: true });
+      this.dependencyService.setPackageVersion(this.name,sortedVersions[0] )
 
     }
   }
@@ -134,11 +141,15 @@ export class PackageInfoComponent {
         validNextMajorVersions,
         '*'
       );
-      versionControl?.setValue(highestNextMajorVersion,{ emitEvent: true });
+      if(highestNextMajorVersion){
+        this.dependencyService.setPackageVersion(this.name,highestNextMajorVersion )
+        versionControl?.setValue(highestNextMajorVersion,{ emitEvent: true });
+      }
     }
   }
 
   onVersionChange(event: any): void {
+    console.log('changeversion',event);
     this.versionChange.emit({ dep: this.dep, event });
   }
 

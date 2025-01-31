@@ -72,7 +72,7 @@ export class DependencyManagerComponent implements OnInit {
   ) {
   }
   ngAfterViewInit(): void {
-    //Called after ngAfterContentInit when the component's view has been initialized. Applies to components only.
+    //Called after ngAfterContentInit w1hen the component's view has been initialized. Applies to components only.
     //Add 'implements AfterViewInit' to the class.
     this.scrollHandle = this.scrollBar.nativeElement.addEventListener('scroll',this.onScroll.bind(this));
   }
@@ -90,6 +90,7 @@ export class DependencyManagerComponent implements OnInit {
     this.dependencyService.setPackageVersionSelection$
       .pipe(takeUntil(this.cancelSubscriptions$))
       .subscribe((versionInfo) => {
+        console.log('set package verion',versionInfo)
         if (this.package && this.dependenciesForm.get('dependencies')) {
           for (const dep of (
             this.dependenciesForm.get('dependencies') as FormArray

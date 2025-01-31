@@ -47,7 +47,10 @@ import { HomeComponent } from './home.component';
     ChangelogInfoComponent,
     SafeHtmlPipe
   ],
-  imports: [CommonModule, SharedModule,HomeRoutingModule,
+  imports: [
+    CommonModule, 
+    SharedModule,
+    HomeRoutingModule,
     BrowserAnimationsModule,
     HttpClientModule,
     ReactiveFormsModule,
