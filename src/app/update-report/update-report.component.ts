@@ -25,6 +25,7 @@ export interface UpdateRow {
 export class UpdateReportComponent implements OnInit {
   @Input() package?: PackageJson;
   @Input() report?: UpdateReport;
+  filterValue: string='';
 
   get count() {
     return this.dataSource.data.length;
@@ -82,8 +83,8 @@ export class UpdateReportComponent implements OnInit {
   }
 
   applyFilter(event: Event): void {
-    const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = filterValue.trim().toLowerCase();
+    this.filterValue = (event.target as HTMLInputElement).value;
+    this.dataSource.filter = this.filterValue.trim().toLowerCase();
   }
 
   private updateTableData(): void {

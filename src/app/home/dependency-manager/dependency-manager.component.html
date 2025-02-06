@@ -19,45 +19,45 @@
 <ng-scrollbar style="height:100vh" #scrollBar
 >
 <div class="package-manager">
-    <div class="drop-area" *ngIf="!package">
-       <ng-container *ngIf="!isFileDraggedOver,else accept">
+  <div class="drop-area" *ngIf="!package">
+    <ng-container *ngIf="!isFileDraggedOver,else accept">
          <p><mat-icon class="big-icon" fontIcon="description"></mat-icon></p>
          <p>drag & drop a valid package.json file here</p>
         </ng-container>
         <ng-template #accept>
          <mat-icon class="green big-icon" fontIcon="add_circle"></mat-icon>
        </ng-template>
-    </div>
-    <form [formGroup]="dependenciesForm">
-      <mat-card *ngIf="package">
-          <mat-toolbar>
-            <span class="package__title">{{ package?.name }} &#64; {{package?.version}}
-            </span>
-            <span class="spacer"></span>
-            <button 
-              mat-icon-button 
-              aria-label="show package JSON" 
-              matTooltip="show JSON"
-              (click)="showPackage = !showPackage"
-            >
-              <mat-icon>visibility</mat-icon>
-            </button>
-            <button 
-              mat-icon-button 
-              [disabled]="isAuditRunning"
-              aria-label="npm audit" 
-              matTooltip="audit"
-              (click)="audit()"
-            >
-              <mat-icon>spellcheck</mat-icon>
-            </button>
-            <button matTooltip="check updates" mat-icon-button aria-label="npm update" (click)="update()">
-              <mat-icon>upgrade</mat-icon>
-            </button>
-            <button matTooltip="Copy JSON" mat-icon-button aria-label="copy package.json to clipboard" (click)="copyJsonToClipboard()">
-              <mat-icon>content_copy</mat-icon>
-            </button>
-          </mat-toolbar>
+      </div>
+      <form [formGroup]="dependenciesForm" *ngIf="package">
+      <mat-toolbar>
+        <span class="package__title">{{ package?.name }} &#64; {{package?.version}}
+        </span>
+        <span class="spacer"></span>
+        <button 
+          mat-icon-button 
+          aria-label="show package JSON" 
+          matTooltip="show JSON"
+          (click)="showPackage = !showPackage"
+        >
+          <mat-icon>visibility</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          [disabled]="isAuditRunning"
+          aria-label="npm audit" 
+          matTooltip="audit"
+          (click)="audit()"
+        >
+          <mat-icon>spellcheck</mat-icon>
+        </button>
+        <button matTooltip="check updates" mat-icon-button aria-label="npm update" (click)="update()">
+          <mat-icon>upgrade</mat-icon>
+        </button>
+        <button matTooltip="Copy JSON" mat-icon-button aria-label="copy package.json to clipboard" (click)="copyJsonToClipboard()">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </mat-toolbar>
+      <mat-card *ngIf="package" class="section">
         <mat-card-content>
           <div class="package__analysis">
             <div class="col2">
@@ -90,7 +90,7 @@
           </div>
         </mat-card-content>
       </mat-card>
-      <mat-card *ngIf="package" class="dependencies">
+      <mat-card *ngIf="package" class="section dependencies">
         <mat-card-content>
         <div class="actions">
           <h2 class="dependencies__title">
@@ -99,7 +99,7 @@
           </h2>
           <span class="flex-space"></span>
           <mat-form-field class="dependencies__search">
-            <input matInput type="search" [(ngModel)]="filterValue"  />
+            <input matInput type="search" (input)="applyFilter($event)" />
             @if (filterValue) {
               <button matSuffix mat-icon-button aria-label="Clear" (click)="filterValue=''">
                 <mat-icon>close</mat-icon>
@@ -111,17 +111,17 @@
           </mat-form-field>
         </div>
         
-        <mat-accordion *ngFor="let dep of filteredDependencies" [id]="dep.get('name').value">
+        <mat-accordion *ngFor="let dep of filteredDependencies" [id]="dep.get('name')?.value">
           <mat-expansion-panel hideToggle>
             <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
-              <mat-panel-title> {{dep.get('name').value}} </mat-panel-title>
+              <mat-panel-title> {{dep.get('name')?.value}} </mat-panel-title>
               <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
-              <mat-panel-description> {{dep.get('version').value }} </mat-panel-description>
+              <mat-panel-description> {{dep.get('version')?.value }} </mat-panel-description>
             </mat-expansion-panel-header>
             <ng-template matExpansionPanelContent>
               <app-package-info 
                 (versionChange)="onVersionChange(dep,$event)" 
-                [name]="dep.get('name').value" 
+                [name]="dep.get('name')?.value" 
                 [dep]="dep" 
               ></app-package-info>
             </ng-template>
@@ -130,7 +130,7 @@
         </mat-card-content>
       </mat-card>
     </form>
-    <mat-card>
+    <mat-card class="section">
       <app-package-autocomplete *ngIf="package" (added)=onPackageAdded($event)></app-package-autocomplete>
     </mat-card>
     <!-- <div class="splash animate-gradient">

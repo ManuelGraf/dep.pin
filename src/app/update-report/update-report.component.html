@@ -5,9 +5,9 @@
       <mat-icon fontIcon="upgrade"></mat-icon> Update All
     </button>
     <span class="flex-space"></span>
-    <mat-form-field appearance="outline" class="filter-input">
-      <mat-label>Filter updates</mat-label>
-      <input matInput (input)="applyFilter($event)" placeholder="Filter by package name" />
+    <mat-form-field class="report__search">
+      <input matInput type="search" (input)="applyFilter($event)"  />
+        <mat-icon mat-icon-button matSuffix>search</mat-icon>
     </mat-form-field>
   </div>
   <ng-container *ngIf="count > 0">
