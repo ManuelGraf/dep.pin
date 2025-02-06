@@ -27,6 +27,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { NgScrollbarModule } from 'ngx-scrollbar';
 import { AuditReportComponent } from '../audit-report/audit-report.component';
 import { ChangelogInfoComponent } from '../changelog-info/changelog-info.component';
+import { GroupByPipe } from '../group-by.pipe';
 import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.component';
 import { PackageAutocompleteComponent } from '../package-autocomplete/package-autocomplete.component';
 import { PackageInfoComponent } from '../package-info/package-info.component';
@@ -45,7 +46,8 @@ import { HomeComponent } from './home.component';
     UpdateReportComponent,
     LoadingSpinnerComponent,
     ChangelogInfoComponent,
-    SafeHtmlPipe
+    SafeHtmlPipe,
+    GroupByPipe
   ],
   imports: [
     CommonModule, 

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { DOCUMENT } from '@angular/common';
-import { Component, Inject, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -53,11 +53,18 @@ export class DependencyManagerComponent implements OnInit {
   isHeaderCondensed: boolean = false;
   scrollHandle:any;
   filterValue: string ="";
+  get dependencies(){
+    return this.dependenciesForm.get('dependencies') as FormArray;
+  }
+  get dependencyCount(){
+    return (this.dependenciesForm.get('dependencies') as FormArray).length;
+  }
   get stateAction(){
     return this.state.getCurrentAction()
   }
 
   @ViewChild(NgScrollbar) scrollBar!:NgScrollbar;
+  @ViewChild('filterInput', { static: false }) filterInput!: ElementRef;
   
 
   constructor(
@@ -121,19 +128,7 @@ export class DependencyManagerComponent implements OnInit {
     this.state.info(state);
   }
 
-  get filteredDependencies():AbstractControl[]{
-    if(this.dependenciesForm.get('dependencies')){
-      return [... (this.dependenciesForm.get('dependencies') as FormArray).controls]
-        .filter(((ctrl:AbstractControl)=>{
-          const name = ctrl.get('name')?.value; 
-          const type = ctrl.get('type')?.value;
-          if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
-          return (name && name.match(this.filterValue) ? true : false)
-      })) as AbstractControl[]
-    }else{
-      return []
-    }
-  }
+  filteredDependencies:AbstractControl[] = [];
 
   get countDependencies() {
     return Object.keys(this.package?.dependencies || {}).length;
@@ -214,6 +209,7 @@ export class DependencyManagerComponent implements OnInit {
         this.addDependencies(packageJson.dependencies || {}, 'dependency');
         this.addDependencies(packageJson.devDependencies || {}, 'devDependency');
         this.setState('package.json loaded.');
+        this.setFilter('',true);
         this.snackBar.open('package loaded', 'Close', {
           duration: 5000,
           panelClass: ['snackbar'],
@@ -446,7 +442,25 @@ export class DependencyManagerComponent implements OnInit {
   }
 
   applyFilter(event: Event): void {
-    this.filterValue = (event.target as HTMLInputElement).value;
+    this.setFilter((event.target as HTMLInputElement).value)    
+  }
+  setFilter(query:string,updateInput=false){
+    this.filterValue = query;
+    
+    if(this.dependenciesForm.get('dependencies')){
+      this.filteredDependencies = (this.dependenciesForm.get('dependencies') as FormArray).controls
+      .filter(((ctrl:AbstractControl)=>{
+        const name = ctrl.get('name')?.value; 
+        const type = ctrl.get('type')?.value;
+        if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
+        return (name && name.match(this.filterValue) ? true : false)
+      }))
+    }else{
+      this.filteredDependencies = []
+    }
+    if(updateInput){
+      this.filterInput.nativeElement.value = this.filterValue;
+    } 
   }
 
 

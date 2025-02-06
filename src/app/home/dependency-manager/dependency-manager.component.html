@@ -94,14 +94,13 @@
         <mat-card-content>
         <div class="actions">
           <h2 class="dependencies__title">
-            <span *ngIf="countDependencies">Dependencies ({{countDependencies}})</span>
-            <span *ngIf="countDevDependencies">Dev Dependencies ({{countDevDependencies}})</span>
+            Dependencies <mat-chip>{{dependencyCount}}</mat-chip>            
           </h2>
           <span class="flex-space"></span>
           <mat-form-field class="dependencies__search">
-            <input matInput type="search" (input)="applyFilter($event)" />
+            <input matInput type="search" (input)="applyFilter($event)" #filterInput />
             @if (filterValue) {
-              <button matSuffix mat-icon-button aria-label="Clear" (click)="filterValue=''">
+              <button matSuffix mat-icon-button aria-label="Clear" (click)="setFilter('',true)">
                 <mat-icon>close</mat-icon>
               </button>
             }
@@ -110,23 +109,33 @@
             }
           </mat-form-field>
         </div>
+        <div class="dependency-section"  *ngFor="let depGroup of filteredDependencies | groupBy:'value.type'">
+          <h3>
+            <span *ngIf="depGroup.key==='dependency' && countDependencies">Dependencies <mat-chip>{{countDependencies}}</mat-chip></span>
+            <span *ngIf="depGroup.key==='devDependency' && countDevDependencies">DevDependencies <mat-chip>{{countDevDependencies}}</mat-chip></span>
+          </h3>
+
+          <mat-accordion [id]="depGroup.key" *ngFor="let dep of depGroup.items">
+            <mat-expansion-panel hideToggle>
+              <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
+                <mat-panel-title> {{dep.get('name')?.value}} </mat-panel-title>
+                <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
+                <mat-panel-description> {{dep.get('version')?.value }} </mat-panel-description>
+              </mat-expansion-panel-header>
+              <ng-template matExpansionPanelContent>
+                <app-package-info 
+                  (versionChange)="onVersionChange(dep,$event)" 
+                  [name]="dep.get('name')?.value" 
+                  [dep]="dep" 
+                ></app-package-info>
+              </ng-template>
+            </mat-expansion-panel>
+  
+            
+          </mat-accordion>
+
+        </div>
         
-        <mat-accordion *ngFor="let dep of filteredDependencies" [id]="dep.get('name')?.value">
-          <mat-expansion-panel hideToggle>
-            <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
-              <mat-panel-title> {{dep.get('name')?.value}} </mat-panel-title>
-              <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
-              <mat-panel-description> {{dep.get('version')?.value }} </mat-panel-description>
-            </mat-expansion-panel-header>
-            <ng-template matExpansionPanelContent>
-              <app-package-info 
-                (versionChange)="onVersionChange(dep,$event)" 
-                [name]="dep.get('name')?.value" 
-                [dep]="dep" 
-              ></app-package-info>
-            </ng-template>
-          </mat-expansion-panel>
-        </mat-accordion>
         </mat-card-content>
       </mat-card>
     </form>

@@ -1,6 +1,6 @@
 <div class="report" *ngIf="count > 0">
   <div class="actions">
-    <h3>Updates&nbsp;via&nbsp;NCU&nbsp;({{count}})</h3>
+    <h3>Updates&nbsp;via&nbsp;NCU&nbsp; <mat-chip>{{count}}</mat-chip></h3>
     <button *ngIf="count > 0" class="action-button" mat-button color="primary" (click)="updateAll()">
       <mat-icon fontIcon="upgrade"></mat-icon> Update All
     </button>
