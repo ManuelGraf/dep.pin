@@ -27,6 +27,7 @@ import {
   DependencyService,
   PackageJson,
 } from '../../core/services/dependency.service';
+import { SettingsService } from '../../settings.service';
 import { StateService } from '../../state.service';
 import { UpdateReport } from '../../update-report/update-report.component';
 // Define the structure of dependencies and package.json
@@ -35,7 +36,6 @@ import { UpdateReport } from '../../update-report/update-report.component';
   selector: 'app-dependency-manager',
   templateUrl: './dependency-manager.component.html',
   styleUrls: ['./dependency-manager.component.scss'],
-  imports:[]
 })
 export class DependencyManagerComponent implements OnInit {
   dependenciesForm!: FormGroup;
@@ -52,6 +52,7 @@ export class DependencyManagerComponent implements OnInit {
   isFileDraggedOver: boolean = false;
   isHeaderCondensed: boolean = false;
   scrollHandle:any;
+  filterValue: string ="";
   get stateAction(){
     return this.state.getCurrentAction()
   }
@@ -69,6 +70,7 @@ export class DependencyManagerComponent implements OnInit {
     public state:StateService,
     @Inject(DOCUMENT) private document: Document,
     private dialog: MatDialog,
+    private settings:SettingsService
   ) {
   }
   ngAfterViewInit(): void {
@@ -90,7 +92,7 @@ export class DependencyManagerComponent implements OnInit {
     this.dependencyService.setPackageVersionSelection$
       .pipe(takeUntil(this.cancelSubscriptions$))
       .subscribe((versionInfo) => {
-        console.log('set package verion',versionInfo)
+        console.log('set package version',versionInfo)
         if (this.package && this.dependenciesForm.get('dependencies')) {
           for (const dep of (
             this.dependenciesForm.get('dependencies') as FormArray
@@ -117,6 +119,20 @@ export class DependencyManagerComponent implements OnInit {
   }
   setState(state: string) {
     this.state.info(state);
+  }
+
+  get filteredDependencies():AbstractControl[]{
+    if(this.dependenciesForm.get('dependencies')){
+      return [... (this.dependenciesForm.get('dependencies') as FormArray).controls]
+        .filter(((ctrl:AbstractControl)=>{
+          const name = ctrl.get('name')?.value; 
+          const type = ctrl.get('type')?.value;
+          if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
+          return (name && name.match(this.filterValue) ? true : false)
+      })) as AbstractControl[]
+    }else{
+      return []
+    }
   }
 
   get countDependencies() {
@@ -428,6 +444,11 @@ export class DependencyManagerComponent implements OnInit {
       this.state.end('checking for updates...')
     });
   }
+
+  applyFilter(event: Event): void {
+    this.filterValue = (event.target as HTMLInputElement).value;
+  }
+
 
   ngOnDestroy(): void {
     //Called once, before the instance is destroyed.

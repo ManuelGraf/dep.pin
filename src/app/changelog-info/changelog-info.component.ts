@@ -4,13 +4,11 @@ import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import * as semver from 'semver';
 import { DependencyService } from '../core/services/dependency.service';
 import { GithubRelease } from '../github.service';
-import { LoadingSpinnerComponent } from "../loading-spinner/loading-spinner.component";
 
 @Component({
   selector: 'app-changelog-info',
   templateUrl: `changelog-info.component.html`,
   styleUrls: ['./changelog-info.component.scss'],
-  imports: [LoadingSpinnerComponent]
 })
 export class ChangelogInfoComponent implements OnInit {
   

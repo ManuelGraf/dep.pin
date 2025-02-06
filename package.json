@@ -1,6 +1,6 @@
 {
   "name": "dep.pin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Web App to manage package json files",
   "homepage": "https://github.com/maximegris/angular-electron",
   "author": {

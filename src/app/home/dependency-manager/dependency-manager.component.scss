@@ -144,7 +144,16 @@
   white-space: pre-wrap;
 }
 
-.dependencies{flex:1 1 100%}
+.dependencies{
+  flex:1 1 100%;
+  &__title{
+    flex:1 1 50%;
+    white-space: nowrap;
+  }
+  &__search{
+    flex:1 1 50%
+  }
+}
 .peerDeps{
   .details{
     // display:none;

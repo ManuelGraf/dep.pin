@@ -28,16 +28,6 @@
          <mat-icon class="green big-icon" fontIcon="add_circle"></mat-icon>
        </ng-template>
     </div>
-    <div class="drop-area" *ngIf="!package">
-       <ng-container *ngIf="!isFileDraggedOver,else accept">
-         <p><mat-icon class="big-icon" fontIcon="description"></mat-icon></p>
-         <p>drag & drop a valid package.json file here</p>
-        </ng-container>
-        <ng-template #accept>
-         <mat-icon class="green big-icon" fontIcon="add_circle"></mat-icon>
-       </ng-template>
-    </div>
-
     <form [formGroup]="dependenciesForm">
       <mat-card *ngIf="package">
           <mat-toolbar>
@@ -100,9 +90,28 @@
           </div>
         </mat-card-content>
       </mat-card>
-      <mat-card *ngIf="package">
+      <mat-card *ngIf="package" class="dependencies">
         <mat-card-content>
-        <mat-accordion *ngFor="let dep of $any(dependenciesForm.get('dependencies')).controls" [id]="dep.get('name').value">
+        <div class="actions">
+          <h2 class="dependencies__title">
+            <span *ngIf="countDependencies">Dependencies ({{countDependencies}})</span>
+            <span *ngIf="countDevDependencies">Dev Dependencies ({{countDevDependencies}})</span>
+          </h2>
+          <span class="flex-space"></span>
+          <mat-form-field class="dependencies__search">
+            <input matInput type="search" [(ngModel)]="filterValue"  />
+            @if (filterValue) {
+              <button matSuffix mat-icon-button aria-label="Clear" (click)="filterValue=''">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+            @if(!filterValue) {
+              <mat-icon mat-icon-button matSuffix>search</mat-icon>
+            }
+          </mat-form-field>
+        </div>
+        
+        <mat-accordion *ngFor="let dep of filteredDependencies" [id]="dep.get('name').value">
           <mat-expansion-panel hideToggle>
             <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
               <mat-panel-title> {{dep.get('name').value}} </mat-panel-title>
