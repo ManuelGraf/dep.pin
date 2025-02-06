@@ -96,7 +96,28 @@
           <h2 class="dependencies__title">
             Dependencies <mat-chip>{{dependencyCount}}</mat-chip>            
           </h2>
-          <span class="flex-space"></span>
+          <span class="flex-space settings__visibility">
+
+            <button 
+            [ngClass]="{'inactive':!this.settings.isVisibleDependencies}"
+            mat-icon-button 
+            aria-label="toggle dependencies" 
+            [matTooltip]="!this.settings.isVisibleDependencies ? 'show dependencies' : 'hide dependencies'"
+            (click)="this.settings.isVisibleDependencies = !this.settings.isVisibleDependencies"
+          >
+            <mat-icon>person</mat-icon>
+          </button>
+            <button 
+            [ngClass]="{'inactive':!this.settings.isVisibleDevDependencies}"
+            mat-icon-button 
+            aria-label="toggle dev dependencies" 
+            [matTooltip]="!this.settings.isVisibleDevDependencies ? 'show devDependencies' : 'hide devDependencies'"
+            (click)="this.settings.isVisibleDevDependencies = !this.settings.isVisibleDevDependencies"
+          >
+            <mat-icon>engineering</mat-icon>
+          </button>
+  
+          </span>
           <mat-form-field class="dependencies__search">
             <input matInput type="search" (input)="applyFilter($event)" #filterInput />
             @if (filterValue) {
@@ -109,13 +130,14 @@
             }
           </mat-form-field>
         </div>
-        <div class="dependency-section"  *ngFor="let depGroup of filteredDependencies | groupBy:'value.type'">
+        <div class="dependency-section"  *ngFor="let depGroup of filteredDependencies | groupBy:'value.type'" [ngClass]="{'hidden':!isVisibleDependencyType(depGroup.key)}">
+          
           <h3>
             <span *ngIf="depGroup.key==='dependency' && countDependencies">Dependencies <mat-chip>{{countDependencies}}</mat-chip></span>
             <span *ngIf="depGroup.key==='devDependency' && countDevDependencies">DevDependencies <mat-chip>{{countDevDependencies}}</mat-chip></span>
           </h3>
 
-          <mat-accordion [id]="depGroup.key" *ngFor="let dep of depGroup.items">
+          <mat-accordion  [id]="depGroup.key" *ngFor="let dep of depGroup.items">
             <mat-expansion-panel hideToggle>
               <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
                 <mat-panel-title> {{dep.get('name')?.value}} </mat-panel-title>

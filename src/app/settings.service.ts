@@ -4,7 +4,8 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class SettingsService {
-  isVisibleDevDependencies= true;
+  isVisibleDependencies= true;
+  isVisibleDevDependencies= false;
 
   constructor() { }
 }

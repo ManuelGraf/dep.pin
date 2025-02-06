@@ -452,7 +452,7 @@ export class DependencyManagerComponent implements OnInit {
       .filter(((ctrl:AbstractControl)=>{
         const name = ctrl.get('name')?.value; 
         const type = ctrl.get('type')?.value;
-        if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
+        // if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
         return (name && name.match(this.filterValue) ? true : false)
       }))
     }else{
@@ -461,6 +461,17 @@ export class DependencyManagerComponent implements OnInit {
     if(updateInput){
       this.filterInput.nativeElement.value = this.filterValue;
     } 
+  }
+
+  isVisibleDependencyType(type:string){
+    switch(type){
+      case 'dependency':
+        return this.settings.isVisibleDependencies
+      case 'devDependency':
+        return this.settings.isVisibleDevDependencies
+      default:
+        return true;
+    }
   }
 
 
