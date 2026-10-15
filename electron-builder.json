@@ -33,9 +33,5 @@
     "target": [
       "AppImage"
     ]
-  },
-  "publish": {
-    "provider": "github",
-    "releaseType": "draft"
   }
 }

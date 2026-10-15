@@ -40,7 +40,6 @@ Changes to `electron/` require restarting `npm start`.
 | `npm run build`          | Build renderer and main process into `dist/`                    |
 | `npm run electron:local` | Build and start the production app                              |
 | `npm run package`        | Build a distributable into `release/` (electron-builder)        |
-| `npm run release`        | Build and upload to a draft GitHub release (used by CI)         |
 | `npm test`               | Unit tests (Vitest)                                             |
 | `npm run e2e`            | End-to-end tests against the built Electron app (Playwright)    |
 | `npm run lint`           | ESLint                                                          |
@@ -54,7 +53,12 @@ npm version minor        # or patch / major: bumps package.json, commits and tag
 git push --follow-tags
 ```
 
-The workflow checks that the tag matches the `package.json` version, runs lint and tests, then builds the Windows and Linux apps and uploads them to a **draft** release. Review the draft on GitHub, add release notes and publish it.
+The workflow checks that the tag matches the `package.json` version, runs lint and tests, then builds the Windows and Linux apps and attaches them to the release of that tag:
+
+- If there is no release for the tag yet, a **draft** with generated release notes is created. Review it on GitHub and publish it.
+- If you already created the release yourself, the files are added to it (existing files with the same name are replaced).
+
+To rebuild an existing tag, e.g. after fixing the workflow, use _Actions → Release → Run workflow_ and enter the tag.
 
 Every push to `main` and every pull request runs lint, tests and a build ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 

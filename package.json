@@ -22,7 +22,6 @@
     "build": "ng build && npm run electron:build",
     "electron:local": "npm run build && electron .",
     "package": "npm run build && electron-builder build --publish=never",
-    "release": "npm run build && electron-builder build --publish always",
     "test": "ng test --watch=false",
     "test:watch": "ng test",
     "e2e": "npm run build && playwright test -c e2e/playwright.config.ts",
