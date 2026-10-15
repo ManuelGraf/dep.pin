@@ -3,7 +3,9 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "schematicCollections": ["angular-eslint"],
+    "schematicCollections": [
+      "angular-eslint"
+    ],
     "analytics": false
   },
   "newProjectRoot": "projects",
@@ -36,11 +38,14 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
-              },
-              "src/favicon.ico"
+              }
             ],
-            "styles": ["src/styles.scss"],
-            "allowedCommonJsDependencies": ["semver"]
+            "styles": [
+              "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "semver"
+            ]
           },
           "configurations": {
             "production": {
@@ -95,7 +100,12 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html", "electron/**/*.ts", "e2e/**/*.ts"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html",
+              "electron/**/*.ts",
+              "e2e/**/*.ts"
+            ]
           }
         }
       }
