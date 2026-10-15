@@ -1,14 +1,17 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatTableDataSource } from '@angular/material/table';
-import * as semver from 'semver'; // Import semver
-import { ChangelogInfoComponent } from '../changelog-info/changelog-info.component';
-import { DependencyService, PackageJson } from '../core/services/dependency.service';
-
-export interface UpdateReport {
-  [key: string]: string;
-}
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import * as semver from 'semver';
+import type { ChangelogInfoData } from '../changelog-info/changelog-info.component';
+import { PackageJson, UpdateReport } from '../core/models';
+import { PackageStore } from '../core/package-store';
 
 export interface UpdateRow {
   package: string;
@@ -19,101 +22,77 @@ export interface UpdateRow {
 
 @Component({
   selector: 'app-update-report',
+  imports: [
+    MatButtonModule,
+    MatChipsModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatPaginator,
+    MatTableModule,
+    MatTooltipModule,
+  ],
   templateUrl: './update-report.component.html',
-  styleUrls: ['./update-report.component.scss'],
+  styleUrl: './update-report.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UpdateReportComponent implements OnInit {
-  @Input() package?: PackageJson;
-  @Input() report?: UpdateReport;
-  filterValue: string='';
+export class UpdateReportComponent {
+  private readonly store = inject(PackageStore);
+  private readonly dialog = inject(MatDialog);
 
-  get count() {
-    return this.dataSource.data.length;
+  readonly package = input.required<PackageJson>();
+  readonly report = input.required<UpdateReport>();
+
+  protected readonly displayedColumns = ['package', 'before', 'after', 'update'];
+  protected readonly dataSource = new MatTableDataSource<UpdateRow>();
+  protected readonly filter = signal('');
+  private readonly paginator = viewChild(MatPaginator);
+
+  /** available updates that have not been applied yet */
+  protected readonly rows = computed<UpdateRow[]>(() => {
+    const pkg = this.package();
+    const current = { ...pkg.peerDependencies, ...pkg.devDependencies, ...pkg.dependencies };
+    return Object.entries(this.report())
+      .map(([name, after]) => {
+        const before = current[name] ?? null;
+        const from = before ? semver.minVersion(before) : null;
+        const to = semver.minVersion(after);
+        return {
+          package: name,
+          before,
+          after,
+          isMajorUpdate: !!from && !!to && semver.major(to) > semver.major(from),
+        };
+      })
+      .filter((row) => row.before !== row.after);
+  });
+
+  constructor() {
+    effect(() => {
+      this.dataSource.data = this.rows();
+      this.dataSource.filter = this.filter().trim().toLowerCase();
+      this.dataSource.paginator = this.paginator() ?? null;
+    });
   }
 
-  displayedColumns: string[] = ['package', 'before', 'after', 'update'];
-  dataSource = new MatTableDataSource<UpdateRow>();
-
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-
-  constructor(private dependencyService: DependencyService, private dialog: MatDialog) {}
-
-  ngOnInit(): void {
-    this.updateTableData();
+  protected update(name: string, version: string): void {
+    this.store.setVersion(name, version);
   }
 
-  ngOnChanges(): void {
-    this.updateTableData();
-  }
-
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator; // Attach paginator after view initialization
-  }
-
-  getCurrentVersion(name: string): string | null {
-    const all = {
-      ...this.package?.dependencies,
-      ...this.package?.devDependencies,
-      ...this.package?.peerDependencies,
-    };
-    return all[name] || null;
-  }
-
-  update(name: string, version: string): void {
-    this.dependencyService.setPackageVersionSelection$.next({ name, version });
-    this.removeRow(name);
-  }
-
-  removeRow(name: string): void {
-    const updatedData = this.dataSource.data.filter((row) => row.package !== name);
-    this.dataSource.data = updatedData;
-  }
-
-  updateAll(): void {
+  protected updateAll(): void {
     if (confirm('Are you sure you want to update all visible packages?')) {
-      const visibleData = this.dataSource.filteredData; // Get currently visible rows
-      if (visibleData?.length) {
-        visibleData.forEach((element) => {
-          if (element.package && element.after) {
-            this.update(element.package, element.after);
-          }
-        });
+      for (const row of this.dataSource.filteredData) {
+        this.update(row.package, row.after);
       }
     }
   }
 
-  applyFilter(event: Event): void {
-    this.filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = this.filterValue.trim().toLowerCase();
-  }
-
-  private updateTableData(): void {
-    if (!this.report || !this.package) {
-      this.dataSource.data = [];
-      return;
-    }
-
-    this.dataSource.data = Object.entries(this.report).map(([key, value]) => {
-      const currentVersion = this.getCurrentVersion(key);
-      const isMajorUpdate =
-        currentVersion && semver.valid(currentVersion) && semver.valid(value)
-          ? semver.diff(currentVersion, value) === 'major'
-          : false;
-
-      return {
-        package: key,
-        before: currentVersion,
-        after: value,
-        isMajorUpdate,
-      };
-    });
-  }
-
-  openChangelog(packageName: string, currentVersion: string | null, newVersion: string): void {
-    console.log('open changelog for %o from %o to %o', packageName,currentVersion,newVersion)
-    this.dialog.open(ChangelogInfoComponent, {
+  protected async openChangelog(row: UpdateRow): Promise<void> {
+    // lazy loaded, keeps the markdown parser out of the initial bundle
+    const { ChangelogInfoComponent } = await import('../changelog-info/changelog-info.component');
+    this.dialog.open<unknown, ChangelogInfoData>(ChangelogInfoComponent, {
       width: '800px',
-      data: { packageName, currentVersion, newVersion },
+      data: { packageName: row.package, currentVersion: row.before, newVersion: row.after },
     });
   }
 }

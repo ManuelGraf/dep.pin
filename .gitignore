@@ -2,6 +2,8 @@
 
 # compiled output
 /dist
+/.nx
+/.angular
 /tmp
 /out-tsc
 /app-builds
@@ -44,6 +46,7 @@ testem.log
 !/e2e/protractor.conf.js
 /e2e/*.map
 /e2e/tracing
+/test-results
 /e2e/screenshots
 
 # System Files

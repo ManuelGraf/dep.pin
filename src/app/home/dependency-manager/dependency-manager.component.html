@@ -1,171 +1,147 @@
-<mat-toolbar 
-  color="primary" 
-  class="header animate-gradient" 
-  [ngClass]="{
-      'play-animation':isLoading,
-      'header--scrolled':isHeaderCondensed
-  }">
-  <!-- https://jossef.github.io/material-design-icons-iconfont/ -->
-  <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon><span class="logo-type">DEP<span class="wide">.</span>PIN</span></h2>
-  <div class="state" 
-    [ngClass]="{
-      'is-loading':state.getCurrentAction() === 'start',
-    }">
-    {{state.getCurrentMessage()}}
-  </div>
-  <input type="file" (change)="onFileSelected($event)" />
-
-</mat-toolbar>
-<ng-scrollbar style="height:100vh" #scrollBar
+<mat-toolbar
+  class="header animate-gradient"
+  [class.play-animation]="isLoading()"
+  [class.header--scrolled]="isHeaderCondensed()"
 >
-<div class="package-manager">
-  <div class="drop-area" *ngIf="!package">
-    <ng-container *ngIf="!isFileDraggedOver,else accept">
-         <p><mat-icon class="big-icon" fontIcon="description"></mat-icon></p>
-         <p>drag & drop a valid package.json file here</p>
-        </ng-container>
-        <ng-template #accept>
-         <mat-icon class="green big-icon" fontIcon="add_circle"></mat-icon>
-       </ng-template>
-      </div>
-      <form [formGroup]="dependenciesForm" *ngIf="package">
+  <!-- https://fonts.google.com/icons -->
+  <h2 class="logo">
+    <mat-icon class="logo-icon" fontIcon="push_pin" />
+    <span class="logo-type">DEP<span class="wide">.</span>PIN</span>
+  </h2>
+  <div class="state" [class.is-loading]="state.currentAction() === 'start'">
+    {{ state.currentMessage() }}
+  </div>
+  <input class="no-drag" type="file" accept="application/json,.json" (change)="onFileSelected($event)" />
+</mat-toolbar>
+
+<div class="scroll-container" (scroll)="onScroll($event)">
+  <div class="package-manager">
+    @if (package(); as pkg) {
       <mat-toolbar>
-        <span class="package__title">{{ package?.name }} &#64; {{package?.version}}
-        </span>
+        <span class="package__title">{{ pkg.name }} &#64; {{ pkg.version }}</span>
         <span class="spacer"></span>
-        <button 
-          mat-icon-button 
-          aria-label="show package JSON" 
-          matTooltip="show JSON"
-          (click)="showPackage = !showPackage"
-        >
+        <button mat-icon-button aria-label="show package JSON" matTooltip="show JSON" (click)="showPackage.set(!showPackage())">
           <mat-icon>visibility</mat-icon>
         </button>
-        <button 
-          mat-icon-button 
-          [disabled]="isAuditRunning"
-          aria-label="npm audit" 
-          matTooltip="audit"
-          (click)="audit()"
-        >
+        <button mat-icon-button [disabled]="audit().running" aria-label="npm audit" matTooltip="audit" (click)="runAudit()">
           <mat-icon>spellcheck</mat-icon>
         </button>
-        <button matTooltip="check updates" mat-icon-button aria-label="npm update" (click)="update()">
+        <button mat-icon-button [disabled]="updates().running" aria-label="npm update" matTooltip="check updates" (click)="checkUpdates()">
           <mat-icon>upgrade</mat-icon>
         </button>
-        <button matTooltip="Copy JSON" mat-icon-button aria-label="copy package.json to clipboard" (click)="copyJsonToClipboard()">
+        <button mat-icon-button aria-label="copy package.json to clipboard" matTooltip="Copy JSON" (click)="copyJsonToClipboard()">
           <mat-icon>content_copy</mat-icon>
         </button>
       </mat-toolbar>
-      <mat-card *ngIf="package" class="section">
+
+      <mat-card class="section">
         <mat-card-content>
           <div class="package__analysis">
             <div class="col2">
-              <ng-container *ngIf="updateResults || updateErrors, else loader">
-                <app-update-report *ngIf="!updateErrors" [package]="package" [report] = "updateResults">
-                </app-update-report>
-                <ng-container *ngIf="updateErrors">
-                  {{auditErrors}}
-                </ng-container>
-              </ng-container>
+              @if (updates().error; as error) {
+                <p class="text-warn">{{ error }}</p>
+              } @else if (updates().result; as report) {
+                <app-update-report [package]="pkg" [report]="report" />
+              } @else {
+                <div class="placeholder"><app-loading-spinner /></div>
+              }
             </div>
             <div class="col2">
-              <ng-container *ngIf="(auditResults && auditResults.vulnerabilities) || (auditErrors), else loader">
-                <app-audit-report *ngIf="!auditErrors" [report]="auditResults">
-                </app-audit-report>
-                <ng-container *ngIf="auditErrors">
-                  {{auditErrors}}
-                </ng-container>
-              </ng-container>
+              @if (audit().error; as error) {
+                <p class="text-warn">{{ error }}</p>
+              } @else if (audit().result; as report) {
+                @if (isAuditOutdated()) {
+                  <p class="outdated">
+                    <mat-icon fontIcon="history" />
+                    Dependencies changed since this audit.
+                    <button mat-button (click)="runAudit()">Run again</button>
+                  </p>
+                }
+                <app-audit-report [report]="report" />
+              } @else {
+                <div class="placeholder"><app-loading-spinner /></div>
+              }
             </div>
-            <ng-template #loader>
-              <div class="placeholder">
-                <app-loading-spinner></app-loading-spinner>
-              </div>
-            </ng-template>
-            
           </div>
-          <div class="json" *ngIf="showPackage">
-            <pre>{{package | json}}</pre>
-          </div>
+          @if (showPackage()) {
+            <div class="json">
+              <pre>{{ pkg | json }}</pre>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
-      <mat-card *ngIf="package" class="section dependencies">
+
+      <mat-card class="section dependencies">
         <mat-card-content>
-        <div class="actions">
-          <h2 class="dependencies__title">
-            Dependencies <mat-chip>{{dependencyCount}}</mat-chip>            
-          </h2>
-          <span class="flex-space settings__visibility">
-
-            <button 
-            [ngClass]="{'inactive':!this.settings.isVisibleDependencies}"
-            mat-icon-button 
-            aria-label="toggle dependencies" 
-            [matTooltip]="!this.settings.isVisibleDependencies ? 'show dependencies' : 'hide dependencies'"
-            (click)="this.settings.isVisibleDependencies = !this.settings.isVisibleDependencies"
-          >
-            <mat-icon>person</mat-icon>
-          </button>
-            <button 
-            [ngClass]="{'inactive':!this.settings.isVisibleDevDependencies}"
-            mat-icon-button 
-            aria-label="toggle dev dependencies" 
-            [matTooltip]="!this.settings.isVisibleDevDependencies ? 'show devDependencies' : 'hide devDependencies'"
-            (click)="this.settings.isVisibleDevDependencies = !this.settings.isVisibleDevDependencies"
-          >
-            <mat-icon>engineering</mat-icon>
-          </button>
-  
-          </span>
-          <mat-form-field class="dependencies__search">
-            <input matInput type="search" (input)="applyFilter($event)" #filterInput />
-            @if (filterValue) {
-              <button matSuffix mat-icon-button aria-label="Clear" (click)="setFilter('',true)">
-                <mat-icon>close</mat-icon>
+          <div class="actions">
+            <h2 class="dependencies__title">
+              Dependencies <mat-chip>{{ dependencyCount() }}</mat-chip>
+            </h2>
+            <span class="flex-space settings__visibility">
+              <button
+                mat-icon-button
+                [class.inactive]="!settings.isVisibleDependencies()"
+                aria-label="toggle dependencies"
+                [matTooltip]="settings.isVisibleDependencies() ? 'hide dependencies' : 'show dependencies'"
+                (click)="settings.isVisibleDependencies.set(!settings.isVisibleDependencies())"
+              >
+                <mat-icon>person</mat-icon>
               </button>
-            }
-            @if(!filterValue) {
-              <mat-icon mat-icon-button matSuffix>search</mat-icon>
-            }
-          </mat-form-field>
-        </div>
-        <div class="dependency-section"  *ngFor="let depGroup of filteredDependencies | groupBy:'value.type'" [ngClass]="{'hidden':!isVisibleDependencyType(depGroup.key)}">
-          
-          <h3>
-            <span *ngIf="depGroup.key==='dependency' && countDependencies">Dependencies <mat-chip>{{countDependencies}}</mat-chip></span>
-            <span *ngIf="depGroup.key==='devDependency' && countDevDependencies">DevDependencies <mat-chip>{{countDevDependencies}}</mat-chip></span>
-          </h3>
+              <button
+                mat-icon-button
+                [class.inactive]="!settings.isVisibleDevDependencies()"
+                aria-label="toggle dev dependencies"
+                [matTooltip]="settings.isVisibleDevDependencies() ? 'hide devDependencies' : 'show devDependencies'"
+                (click)="settings.isVisibleDevDependencies.set(!settings.isVisibleDevDependencies())"
+              >
+                <mat-icon>engineering</mat-icon>
+              </button>
+            </span>
+            <mat-form-field class="dependencies__search">
+              <input matInput type="search" [value]="filter()" (input)="filter.set($any($event.target).value)" />
+              @if (filter()) {
+                <button matSuffix mat-icon-button aria-label="Clear" (click)="filter.set('')">
+                  <mat-icon>close</mat-icon>
+                </button>
+              } @else {
+                <mat-icon matSuffix>search</mat-icon>
+              }
+            </mat-form-field>
+          </div>
 
-          <mat-accordion  [id]="depGroup.key" *ngFor="let dep of depGroup.items">
-            <mat-expansion-panel hideToggle>
-              <mat-expansion-panel-header [ngClass]="{'error':dep.errors?.unmetDependencies}">
-                <mat-panel-title> {{dep.get('name')?.value}} </mat-panel-title>
-                <mat-icon class="peer-warning" *ngIf="dep.errors?.unmetDependencies" fontIcon="warning"></mat-icon>
-                <mat-panel-description> {{dep.get('version')?.value }} </mat-panel-description>
-              </mat-expansion-panel-header>
-              <ng-template matExpansionPanelContent>
-                <app-package-info 
-                  (versionChange)="onVersionChange(dep,$event)" 
-                  [name]="dep.get('name')?.value" 
-                  [dep]="dep" 
-                ></app-package-info>
-              </ng-template>
-            </mat-expansion-panel>
-  
-            
-          </mat-accordion>
-
-        </div>
-        
+          @for (group of groups(); track group.type) {
+            <div class="dependency-section" [id]="group.type" [class.hidden]="!isVisibleDependencyType(group.type)">
+              <h3>{{ group.label }} <mat-chip>{{ group.count }}</mat-chip></h3>
+              <mat-accordion>
+                @for (dep of group.items; track dep.name) {
+                  <mat-expansion-panel hideToggle>
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>{{ dep.name }}</mat-panel-title>
+                      <mat-panel-description>{{ dep.version }}</mat-panel-description>
+                    </mat-expansion-panel-header>
+                    <ng-template matExpansionPanelContent>
+                      <app-package-info [entry]="dep" />
+                    </ng-template>
+                  </mat-expansion-panel>
+                }
+              </mat-accordion>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
-    </form>
-    <mat-card class="section">
-      <app-package-autocomplete *ngIf="package" (added)=onPackageAdded($event)></app-package-autocomplete>
-    </mat-card>
-    <!-- <div class="splash animate-gradient">
-      <h2 class="logo"><mat-icon class="logo-icon" fontIcon="push_pin"></mat-icon>DEP<span class="wide">.</span>PIN</h2>
-    </div> -->
+
+      <mat-card class="section">
+        <app-package-autocomplete (added)="onPackageAdded($event)" />
+      </mat-card>
+    } @else {
+      <div class="drop-area">
+        @if (isFileDraggedOver()) {
+          <mat-icon class="green big-icon" fontIcon="add_circle" />
+        } @else {
+          <p><mat-icon class="big-icon" fontIcon="description" /></p>
+          <p>drag &amp; drop a valid package.json file here</p>
+        }
+      </div>
+    }
   </div>
-</ng-scrollbar>
+</div>

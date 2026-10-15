@@ -1,7 +1,20 @@
-.spacer{
-  flex: 1 1 100%
+.actions {
+  display: flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
-.actions{
-  display:flex;
+.severity--critical,
+.severity--high {
+  .severity-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+mat-panel-description {
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

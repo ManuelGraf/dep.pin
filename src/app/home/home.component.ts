@@ -1,17 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { DependencyManagerComponent } from './dependency-manager/dependency-manager.component';
 
 @Component({
   selector: 'app-home',
+  imports: [DependencyManagerComponent],
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent implements OnInit {
-
-  constructor(private router: Router) { }
-
-  ngOnInit(): void {
-    console.log('HomeComponent INIT');
-  }
-
-}
+export class HomeComponent {}

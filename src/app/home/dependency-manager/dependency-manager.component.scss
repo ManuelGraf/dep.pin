@@ -1,63 +1,81 @@
-@use '@angular/material' as mat;
+:host {
+  display: block;
+  height: 100vh;
+}
 
-
-.header{
-  display:flex;
+.header {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  position:fixed;
-  transition: .3s height ease-in-out;
-  z-index:10;
-  height:60px;
-  top:0;
-  box-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+  position: fixed;
+  top: 0;
+  z-index: 10;
+  height: 60px;
+  // keep clear of the native window controls (Electron titleBarOverlay)
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 16px);
+  box-sizing: border-box;
+  transition: 0.3s height ease-in-out;
+  box-shadow: var(--mat-sys-level2);
+  color: white;
+  -webkit-app-region: drag;
 
   &.animate-gradient {
-    background: linear-gradient(90deg, orange, red, purple, orange)!important;
-    background-size: 200%; /* Creates the seamless effect */
+    background: linear-gradient(90deg, orange, red, purple, orange);
+    background-size: 200%;
     animation: gradient-loop 10s linear infinite;
-    animation-play-state:paused;
+    animation-play-state: paused;
   }
-  .play-animation{
-    animation-play-state:running;
+
+  &.play-animation {
+    animation-play-state: running;
   }
-  
-  &--scrolled{
-    height:30px;
-    .logo-type{
-      opacity: 0!important;
-      height:0;
+
+  &--scrolled {
+    height: 30px;
+
+    .logo-type {
+      opacity: 0 !important;
+      height: 0;
     }
-    .logo-icon{
-      top:-0.5em;
+
+    .logo-icon {
+      top: -0.5em;
     }
+
     input {
-      display:none;
+      display: none;
     }
   }
 }
 
-.logo{
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.logo {
   position: relative;
   display: flex;
   justify-content: center;
-  font-weight:700;
-  margin:0;
-  .logo-type{
-    display:flex;
-    opacity:1;
-    transition: .3s opacity ease-in-out;
+  font-weight: 700;
+  margin: 0;
+
+  .logo-type {
+    display: flex;
+    opacity: 1;
+    transition: 0.3s opacity ease-in-out;
   }
-  .wide{
-    padding: 0px 5px;
+
+  .wide {
+    padding: 0 5px;
     text-align: center;
   }
 }
-.logo-icon{
+
+.logo-icon {
   position: absolute;
-  left:50%;
-  top:-0.3em;
-  transform: translate3d(-43%,0,0);
+  left: 50%;
+  top: -0.3em;
+  transform: translate3d(-43%, 0, 0);
 }
 
 @keyframes gradient-loop {
@@ -69,134 +87,107 @@
   }
 }
 
-
-.package-manager{
-  padding-top:60px;
-  width:100%;
+.scroll-container {
+  height: 100%;
+  overflow-y: auto;
 }
-.drop-area{
-  mat-icon{
-    font-size: 50px;
-    height: 50px ;
-    width: 50px ;
-  }
-  width:100%;
-  height:80vh;
+
+.package-manager {
+  padding-top: 60px;
+  width: 100%;
+}
+
+.drop-area {
+  width: 100%;
+  height: 80vh;
   color: #ccc;
-  display:flex;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
-.actions{
-  display:flex;
+
+.actions {
+  display: flex;
 }
-.action-button{
-  white-space: nowrap;
-  flex-shrink: 0;
+
+.big-icon {
+  font-size: 50px;
+  height: 50px;
+  width: 50px;
 }
-.big-icon{
-    font-size: 50px;
-    height: 50px ;
-    width: 50px ;
+
+.spacer {
+  flex: 1 1 100%;
 }
-.spacer{
-  flex:1 1 100%
-}
-.placeholder{
-  height:200px;
-  width:100%;
-  display:flex;
+
+.placeholder {
+  height: 200px;
+  width: 100%;
+  display: flex;
   justify-content: center;
   align-items: center;
-}
-.col2{
-  flex:1 1 50%;
-  position:relative;
-}
-
-.package{
-  display:flex;
   position: relative;
-  &__title{
-    font-size:150%;
-  }
-  &__analysis{
-    display:flex;
-    flex-wrap:wrap;
-    position:relative;
-  }
-  .version{
-    flex: 0 0 30%;
-  }
-  .peerdep{
-    flex:1 1   auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .version-control{
-  }
-}
-.package-wrapper{
-  position:relative;
-}
-.errors{
-  white-space: pre-wrap;
 }
 
-.dependencies{
-  flex:1 1 100%;
-  &__title{
-    flex:1 1 50%;
+.col2 {
+  flex: 1 1 50%;
+  // allow shrinking below the width of long advisory titles
+  min-width: 0;
+  position: relative;
+}
+
+.package {
+  &__title {
+    font-size: 150%;
+  }
+
+  &__analysis {
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+  }
+}
+
+.outdated {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px;
+  color: var(--mat-sys-tertiary);
+}
+
+.dependencies {
+  flex: 1 1 100%;
+
+  &__title {
+    flex: 1 1 50%;
     white-space: nowrap;
   }
-  &__search{
-    flex:1 1 50%
+
+  &__search {
+    flex: 1 1 50%;
   }
 }
-.peerDeps{
-  .details{
-    // display:none;
-  }
-}
-.package-info{
-  position: relative;
-}
-.float{
-  position: absolute;
-  top: 30px;
-  right: 30px;
-}
-.json{
 
-
-}
-
-.dependencies{
-  display:flex;
-}
-
-
-
-.state{
+.state {
   flex: 1 1 100%;
-  display:flex;
+  display: flex;
   justify-content: center;
   align-items: center;
-  opacity:.4;
-  &.is-loading{
-    animation: processingPulse 1.5s infinite ease-in-out;
-  }
+  opacity: 0.4;
 
-  @keyframes processingPulse {
-    0% {
-      opacity: .4;
-    }
-    50% {
-      opacity: 1;
-    }
-    100% {
-      opacity: .4;
-    }
+  &.is-loading {
+    animation: processing-pulse 1.5s infinite ease-in-out;
+  }
+}
+
+@keyframes processing-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
   }
 }

@@ -1,0 +1,7 @@
+{
+  "name": "e2e-fixture",
+  "version": "1.0.0",
+  "dependencies": {
+    "semver": "^7.0.0"
+  }
+}

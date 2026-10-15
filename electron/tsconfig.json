@@ -1,0 +1,16 @@
+// Type checking only; bundling is done by scripts/build-electron.mjs
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "target": "ES2023",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node"]
+  },
+  "include": ["./**/*.ts", "../src/app/core/models.ts", "../src/app/core/dep-pin-api.ts"]
+}

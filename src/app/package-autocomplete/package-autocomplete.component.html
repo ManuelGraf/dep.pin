@@ -1,11 +1,10 @@
 <mat-form-field appearance="fill">
   <mat-label>Package Name</mat-label>
-  <input type="text" matInput (keyup)="update()" [formControl]="packageControl" [matAutocomplete]="auto" />
-  <mat-autocomplete #auto="matAutocomplete" (optionSelected)="valid = true">
-    <mat-option *ngFor="let package of packages" [value]="package">
-      {{ package }}
-    </mat-option>
+  <input type="text" matInput [value]="query()" (input)="onInput($any($event.target).value)" [matAutocomplete]="auto" />
+  <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selected.set($event.option.value)">
+    @for (name of packages(); track name) {
+      <mat-option [value]="name">{{ name }}</mat-option>
+    }
   </mat-autocomplete>
 </mat-form-field>
-<button [disabled]="!valid" (click)="add(packageControl.value)" mat-button>add</button>
-
+<button mat-button [disabled]="!selected()" (click)="add()">add</button>

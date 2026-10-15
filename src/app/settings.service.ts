@@ -1,11 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class SettingsService {
-  isVisibleDependencies= true;
-  isVisibleDevDependencies= false;
-
-  constructor() { }
+  readonly isVisibleDependencies = signal(true);
+  readonly isVisibleDevDependencies = signal(false);
 }

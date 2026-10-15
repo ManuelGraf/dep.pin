@@ -1,20 +1,9 @@
-/** @type {import('@playwright/test').PlaywrightTestConfig} */
-const config = {
-  testDir: '.',
-  timeout: 45000,
-  outputDir: './screenshots',
-  use: {
-    headless: false,
-    viewport: { width: 1280, height: 720 },
-    launchOptions: {
-      slowMo: 1000,
-    },
-    trace: 'on',
-  },
-  expect: {
-    toMatchSnapshot: { threshold: 0.2 },
-  },
-};
+import { defineConfig } from '@playwright/test';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-module.exports = config;
+export default defineConfig({
+  testDir: '.',
+  timeout: 180_000,
+  outputDir: './screenshots',
+  // all tests share one Electron instance
+  workers: 1,
+});

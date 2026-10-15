@@ -1,153 +1,78 @@
 <mat-card-content>
-
   <div class="actions">
     <h3>Audit</h3>
-  <span class="flex-space"></span>
-  <button class="action-button" mat-button color="primary" (click)="fixAll()">
-    <mat-icon fontIcon="construction"></mat-icon> Fix All
-  </button>
+    <span class="flex-space"></span>
+    <button class="action-button" mat-button [disabled]="!fixes().length" (click)="fixAll()">
+      <mat-icon fontIcon="construction" /> Fix All
+    </button>
   </div>
-  
-  
-  <div class="audit-report">
-  <div class="vulnerabilities">
-    
-    <!-- Critical Vulnerabilities -->
-    <mat-expansion-panel>
-      <mat-expansion-panel-header class="mat-warn">
-        <mat-panel-title><strong>Critical</strong></mat-panel-title>
-        <mat-panel-description *ngIf="report?.metadata">
-          <mat-icon color="warn" *ngIf="report?.metadata?.vulnerabilities?.critical" fontIcon="error"></mat-icon>
-          <mat-icon class="green" *ngIf="!report?.metadata?.vulnerabilities?.critical" fontIcon="check_circle"></mat-icon>
-          {{ report?.metadata?.vulnerabilities?.critical }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-      <div class="vulnerability vulnerability--critical">
-        <mat-expansion-panel *ngFor="let vuln of vulns.critical">
-          <mat-expansion-panel-header>
-            <mat-panel-title> {{ vuln.name }} </mat-panel-title>
-            <mat-panel-description>
-              <span *ngFor="let node of vuln.via">
-                <span *ngIf="node.title; else isString">
-                  <a target="_blank" [href]="node.url">{{ node.title }}</a>
-                </span>
-                <ng-template #isString>{{ node }}</ng-template>
-              </span>
-              <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          <ng-container>
-            {{ vuln.name }} <span *ngIf="vuln.isDirect"><i>(direct)</i></span> {{ vuln.range }} is vulnerable due to:
-            <div *ngFor="let node of vuln.via">
-              <p *ngIf="node.title; else isString"><a target="_blank" [href]="node.url">{{ node.title }}</a></p>
-              <ng-template #isString>{{ node }}</ng-template>
-            </div>
-            <p *ngIf="vuln.fixAvailable; else noFix">
-              <mat-icon fontIcon="construction"></mat-icon>
-              Fix available in {{ vuln.fixAvailable.name }} {{ vuln.fixAvailable.version }}
-              <mat-card-actions>
-                <button (click)="fixVersion(vuln.fixAvailable.name, vuln.fixAvailable.version)" mat-raised-button>
-                  <mat-icon fontIcon="construction"></mat-icon> Fix
-                </button>
-              </mat-card-actions>
-            </p>
-            <ng-template #noFix><p class="no-fix text-warn">No fix found</p></ng-template>
-          </ng-container>
-        </mat-expansion-panel>
-      </div>
-    </mat-expansion-panel>
-    
-    <!-- High Vulnerabilities -->
-    <mat-expansion-panel>
-      <mat-expansion-panel-header class="mat-warn">
-        <mat-panel-title><strong>High</strong></mat-panel-title>
-        <mat-panel-description>
-          <mat-icon color="warn" *ngIf="report?.metadata?.vulnerabilities?.high" fontIcon="error"></mat-icon>
-          <mat-icon class="green" *ngIf="!report?.metadata?.vulnerabilities?.high" fontIcon="check_circle"></mat-icon>
-          {{ report?.metadata?.vulnerabilities?.high }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-      <div class="vulnerability vulnerability--high">
-        <mat-expansion-panel *ngFor="let vuln of vulns.high">
-          <mat-expansion-panel-header>
-            <mat-panel-title> {{ vuln.name }} </mat-panel-title>
-            <mat-panel-description>
-              <span *ngFor="let node of vuln.via">
-                <span *ngIf="node.title; else isString">
-                  <a target="_blank" [href]="node.url">{{ node.title }}</a>
-                </span>
-                <ng-template #isString>{{ node }}</ng-template>
-              </span>
-              <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          <ng-container>
-            {{ vuln.name }} <span *ngIf="vuln.isDirect"><i>(direct)</i></span> {{ vuln.range }} is vulnerable due to:
-            <div *ngFor="let node of vuln.via">
-              <p *ngIf="node.title; else isString"><a target="_blank" [href]="node.url">{{ node.title }}</a></p>
-              <ng-template #isString>{{ node }}</ng-template>
-            </div>
-            <p *ngIf="vuln.fixAvailable; else noFix">
-              <mat-icon fontIcon="construction"></mat-icon>
-              Fix available in {{ vuln.fixAvailable.name }} {{ vuln.fixAvailable.version }}
-              <mat-card-actions>
-                <button (click)="fixVersion(vuln.fixAvailable.name, vuln.fixAvailable.version)" mat-raised-button>
-                  <mat-icon fontIcon="construction"></mat-icon> Fix
-                </button>
-              </mat-card-actions>
-            </p>
-            <ng-template #noFix><p class="no-fix text-warn">No fix found</p></ng-template>
-          </ng-container>
-        </mat-expansion-panel>
-      </div>
-    </mat-expansion-panel>
-  
-    <!-- Moderate Vulnerabilities -->
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title><strong>Moderate</strong></mat-panel-title>
-        <mat-panel-description>
-          <mat-icon *ngIf="report?.metadata?.vulnerabilities?.moderate" fontIcon="error"></mat-icon>
-          <mat-icon class="green" *ngIf="!report?.metadata?.vulnerabilities?.moderate" fontIcon="check_circle"></mat-icon>
-          {{ report?.metadata?.vulnerabilities?.moderate }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-      <div class="vulnerability vulnerability--moderate">
-        <mat-expansion-panel *ngFor="let vuln of vulns.moderate">
-          <mat-expansion-panel-header>
-            <mat-panel-title> {{ vuln.name }} </mat-panel-title>
-            <mat-panel-description>
-              <span *ngFor="let node of vuln.via">
-                <span *ngIf="node.title; else isString">
-                  <a target="_blank" [href]="node.url">{{ node.title }}</a>
-                </span>
-                <ng-template #isString>{{ node }}</ng-template>
-              </span>
-              <mat-icon *ngIf="vuln.fixAvailable" fontIcon="construction"></mat-icon>
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          <ng-container>
-            {{ vuln.name }} <span *ngIf="vuln.isDirect"><i>(direct)</i></span> {{ vuln.range }} is vulnerable due to:
-            <div *ngFor="let node of vuln.via">
-              <p *ngIf="node.title; else isString"><a target="_blank" [href]="node.url">{{ node.title }}</a></p>
-              <ng-template #isString>{{ node }}</ng-template>
-            </div>
-            <p *ngIf="vuln.fixAvailable; else noFix">
-              <mat-icon fontIcon="construction"></mat-icon>
-              Fix available in {{ vuln.fixAvailable.name }} {{ vuln.fixAvailable.version }}
-              <mat-card-actions>
-                <button (click)="fixVersion(vuln.fixAvailable.name, vuln.fixAvailable.version)" mat-raised-button>
-                  <mat-icon fontIcon="construction"></mat-icon> Fix
-                </button>
-              </mat-card-actions>
-            </p>
-            <ng-template #noFix><p class="no-fix text-warn">No fix found</p></ng-template>
-          </ng-container>
-        </mat-expansion-panel>
-      </div>
-    </mat-expansion-panel>
-  </div>
-  </div>
-  
 
+  <div class="audit-report">
+    @for (group of groups(); track group.severity) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header [class]="'severity--' + group.severity">
+          <mat-panel-title><strong>{{ group.label }}</strong></mat-panel-title>
+          <mat-panel-description>
+            @if (group.count) {
+              <mat-icon class="severity-icon" fontIcon="error" />
+            } @else {
+              <mat-icon class="green" fontIcon="check_circle" />
+            }
+            {{ group.count }}
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="vulnerability">
+          @for (vuln of group.vulnerabilities; track vuln.name) {
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>{{ vuln.name }}</mat-panel-title>
+                <mat-panel-description>
+                  @for (via of vuln.via; track $index) {
+                    @if (asBreach(via); as breach) {
+                      <a target="_blank" [href]="breach.url">{{ breach.title }}</a>
+                    } @else {
+                      <span>{{ via }}</span>
+                    }
+                  }
+                  @if (vuln.fixAvailable) {
+                    <mat-icon fontIcon="construction" />
+                  }
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              {{ vuln.name }}
+              @if (vuln.isDirect) {
+                <i>(direct)</i>
+              }
+              {{ vuln.range }} is vulnerable due to:
+              @for (via of vuln.via; track $index) {
+                @if (asBreach(via); as breach) {
+                  <p><a target="_blank" [href]="breach.url">{{ breach.title }}</a></p>
+                } @else {
+                  <p>{{ via }}</p>
+                }
+              }
+
+              @if (fixOf(vuln); as fix) {
+                <p>
+                  <mat-icon fontIcon="construction" />
+                  Fix available in {{ fix.name }} {{ fix.version }}
+                </p>
+                <mat-card-actions>
+                  <button mat-raised-button (click)="applyFix(fix)">
+                    <mat-icon fontIcon="construction" /> Fix
+                  </button>
+                </mat-card-actions>
+              } @else if (vuln.fixAvailable) {
+                <p>Fixable by updating transitive dependencies (npm audit fix).</p>
+              } @else {
+                <p class="no-fix text-warn">No fix found</p>
+              }
+            </mat-expansion-panel>
+          }
+        </div>
+      </mat-expansion-panel>
+    }
+  </div>
 </mat-card-content>

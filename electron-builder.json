@@ -1,38 +1,41 @@
 {
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.manuelgraf.dep-pin",
+  "productName": "dep.pin",
   "asar": true,
   "directories": {
-    "output": "release/"
+    "output": "release/",
+    "buildResources": "src/assets/icons"
   },
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
   "files": [
-    "**/*",
-    "!**/*.ts",
-    "!*.map",
-    "!package.json",
-    "!package-lock.json",
-    {
-      "from": "../dist",
-      "filter": ["**/*"]
-    }
+    "dist/**/*",
+    "!**/*.map",
+    "package.json"
   ],
   "win": {
-    "icon": "dist/assets/icons",
+    "icon": "src/assets/icons/favicon.512x512.png",
     "target": [
       "portable"
     ]
   },
   "portable": {
-    "splashImage": "dist/assets/icons/electron.bmp"
+    "splashImage": "src/assets/icons/electron.bmp"
   },
   "mac": {
-    "icon": "dist/assets/icons",
+    "icon": "src/assets/icons/favicon.icns",
     "target": [
       "dmg"
     ]
   },
   "linux": {
-    "icon": "dist/assets/icons",
+    "icon": "src/assets/icons/favicon.512x512.png",
     "target": [
       "AppImage"
     ]
+  },
+  "publish": {
+    "provider": "github",
+    "releaseType": "draft"
   }
 }

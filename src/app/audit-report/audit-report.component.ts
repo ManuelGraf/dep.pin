@@ -1,99 +1,74 @@
-import { Component, Input, SimpleChanges } from '@angular/core';
-import { DependencyService } from '../core/services/dependency.service';
-export interface Breach{
-  cvss?:{score:number,vectorString:string},
-  cwe?:string[],
-  dependency:string,
-  name:string,
-  range?:string,
-  severity?:Severity,
-  source?:number,
-  title?:string,
-  url?:string
-}
-export interface Vulnerability{
-  effects?:[],
-  fixAvailable?:{isSemVerMajor:boolean,name:string,version:string},
-  isDirect?:boolean,
-  name:string,
-  nodes:string[],
-  range:string,
-  severity: Severity,
-  via: [Breach]
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { AuditReport, Breach, Severity, Vulnerability } from '../core/models';
+import { PackageStore } from '../core/package-store';
 
-}
-export interface AuditReport {
-  auditReportVersion?: string, 
-  vulnerabilities?: Record<string, Vulnerability>;
-  metadata?: { 
-    vulnerabilities: { 
-      info: number, 
-      low: number, 
-      moderate: number, 
-      high: number, 
-      critical: number, 
-      total: number 
-    }, 
-    dependencies?: 
-      { prod: number, 
-        dev: number, 
-        optional: number, 
-        peer: number, 
-        peerOptional: number, 
-        total: number 
-      } 
-    } 
+export interface Fix {
+  name: string;
+  version: string;
 }
 
-export type Severity = 'critical' | 'low' | 'high' | 'moderate';
+interface SeverityGroup {
+  severity: Severity;
+  label: string;
+  count: number;
+  vulnerabilities: Vulnerability[];
+}
+
+const severities: { severity: Severity; label: string }[] = [
+  { severity: 'critical', label: 'Critical' },
+  { severity: 'high', label: 'High' },
+  { severity: 'moderate', label: 'Moderate' },
+  { severity: 'low', label: 'Low' },
+];
 
 @Component({
   selector: 'app-audit-report',
+  imports: [MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule],
   templateUrl: './audit-report.component.html',
-  styleUrls: ['./audit-report.component.scss'],
-
+  styleUrl: './audit-report.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuditReportComponent {
-  @Input() report?: AuditReport = {};
-  vulns: Record<Severity, Vulnerability[]> = {
-    critical: [],
-    low: [],
-    high: [],
-    moderate: [],
-  };
-  constructor(private dependencyService:DependencyService){}
+  private readonly store = inject(PackageStore);
 
-  ngOnChanges(changes: SimpleChanges): void {
-    const report = changes['report']?.currentValue as AuditReport;
+  readonly report = input.required<AuditReport>();
 
-    if (report?.vulnerabilities) {
-      this.resetVulnerabilities();
+  protected readonly groups = computed<SeverityGroup[]>(() => {
+    const report = this.report();
+    const vulnerabilities = Object.values(report.vulnerabilities ?? {});
+    return severities.map(({ severity, label }) => ({
+      severity,
+      label,
+      count: report.metadata?.vulnerabilities[severity] ?? 0,
+      vulnerabilities: vulnerabilities.filter((v) => v.severity === severity),
+    }));
+  });
 
-      for (const value of Object.values(report.vulnerabilities)) {
-        if (this.isSeverity(value.severity)) {
-          this.vulns[value.severity].push(value);
-        }
-      }
-    }
-  }
-  fixAll(){
-    console.log('implemnt me');
-  }
-  resetVulnerabilities(): void {
-    this.vulns = {
-      critical: [],
-      low: [],
-      high: [],
-      moderate: [],
-    };
+  protected readonly fixes = computed(() =>
+    Object.values(this.report().vulnerabilities ?? {})
+      .map((v) => this.fixOf(v))
+      .filter((fix) => !!fix),
+  );
+
+  /** the concrete version that fixes a vulnerability; `fixAvailable: true` means a fix through transitive updates only */
+  protected fixOf(vulnerability: Vulnerability): Fix | null {
+    const fix = vulnerability.fixAvailable;
+    return typeof fix === 'object' ? { name: fix.name, version: fix.version } : null;
   }
 
-  fixVersion(name:string,version:string){
-    console.log('fix version',name,version)
-    this.dependencyService.setPackageVersionSelection$.next({name,version});
+  protected asBreach(via: Breach | string): Breach | null {
+    return typeof via === 'object' ? via : null;
   }
 
-  isSeverity(severity: string): severity is Severity {
-    return ['critical', 'low', 'high', 'moderate'].includes(severity);
+  protected applyFix(fix: Fix): void {
+    this.store.setVersion(fix.name, fix.version);
+  }
+
+  protected fixAll(): void {
+    this.fixes().forEach((fix) => this.applyFix(fix));
   }
 }

@@ -1,16 +1,20 @@
-  <h2 mat-dialog-title>Changelog for {{ data.packageName }} from {{ data.currentVersion }}  to ({{ data.newVersion }})</h2>
-  <mat-dialog-content class="mat-typography">
-    <app-loading-spinner *ngIf="isLoading"></app-loading-spinner>
-    <div *ngIf="!isLoading" class="changelog-content">
-      <ng-container *ngIf="changelog; else noChangelog">        
-        <markdown [data]="changelog"></markdown>
-      </ng-container>
-      <ng-template #noChangelog>
+<h2 mat-dialog-title>
+  Changelog for {{ data.packageName }} from {{ data.currentVersion }} to {{ data.newVersion }}
+</h2>
+<mat-dialog-content class="mat-typography">
+  @if (isLoading()) {
+    <app-loading-spinner />
+  } @else {
+    <div class="changelog-content">
+      @if (changelogHtml(); as html) {
+        <div [innerHTML]="html"></div>
+      } @else {
         <p>No changelog available for this update.</p>
-      </ng-template>
+      }
     </div>
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close>Cancel</button>
-    <button mat-button (click)="install()" cdkFocusInitial>Install</button>
-  </mat-dialog-actions>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-button mat-dialog-close (click)="install()" cdkFocusInitial>Install</button>
+</mat-dialog-actions>

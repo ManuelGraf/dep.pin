@@ -1,78 +1,62 @@
-<div class="report" *ngIf="count > 0">
-  <div class="actions">
-    <h3>Updates&nbsp;via&nbsp;NCU&nbsp; <mat-chip>{{count}}</mat-chip></h3>
-    <button *ngIf="count > 0" class="action-button" mat-button color="primary" (click)="updateAll()">
-      <mat-icon fontIcon="upgrade"></mat-icon> Update All
-    </button>
-    <span class="flex-space"></span>
-    <mat-form-field class="report__search">
-      <input matInput type="search" (input)="applyFilter($event)"  />
-        <mat-icon mat-icon-button matSuffix>search</mat-icon>
-    </mat-form-field>
-  </div>
-  <ng-container *ngIf="count > 0">
+<div class="report">
+  @if (rows().length) {
+    <div class="actions">
+      <h3>Updates&nbsp;via&nbsp;NCU&nbsp; <mat-chip>{{ rows().length }}</mat-chip></h3>
+      <button class="action-button" mat-button (click)="updateAll()">
+        <mat-icon fontIcon="upgrade" /> Update All
+      </button>
+      <span class="flex-space"></span>
+      <mat-form-field class="report__search">
+        <input matInput type="search" (input)="filter.set($any($event.target).value)" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+    </div>
+
     <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
-      <!-- Package Column -->
       <ng-container matColumnDef="package">
-        <mat-header-cell *matHeaderCellDef> Package </mat-header-cell>
-        <mat-cell *matCellDef="let element" class="flex-cell">
-          {{ element.package }}
+        <mat-header-cell *matHeaderCellDef>Package</mat-header-cell>
+        <mat-cell *matCellDef="let row" class="flex-cell">{{ row.package }}</mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="before">
+        <mat-header-cell *matHeaderCellDef>Current</mat-header-cell>
+        <mat-cell *matCellDef="let row">{{ row.before || 'N/A' }}</mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="after">
+        <mat-header-cell *matHeaderCellDef>Available</mat-header-cell>
+        <mat-cell *matCellDef="let row">{{ row.after }}</mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="update">
+        <mat-header-cell *matHeaderCellDef>Update</mat-header-cell>
+        <mat-cell *matCellDef="let row">
+          <button mat-icon-button aria-label="update" (click)="update(row.package, row.after)">
+            <mat-icon>upgrade</mat-icon>
+          </button>
+          @if (row.isMajorUpdate) {
+            <button mat-icon-button class="major-update" matTooltip="This update involves a major version change" (click)="openChangelog(row)">
+              <mat-icon>error</mat-icon>
+            </button>
+          } @else {
+            <button mat-icon-button matTooltip="Show changelog" (click)="openChangelog(row)">
+              <mat-icon>info</mat-icon>
+            </button>
+          }
         </mat-cell>
       </ng-container>
-  
-      <!-- Before Version Column -->
-      <ng-container matColumnDef="before">
-        <mat-header-cell *matHeaderCellDef> Current </mat-header-cell>
-        <mat-cell *matCellDef="let element"> {{ element.before || 'N/A' }} </mat-cell>
-      </ng-container>
-  
-      <!-- After Version Column -->
-      <ng-container matColumnDef="after">
-        <mat-header-cell *matHeaderCellDef> Available </mat-header-cell>
-        <mat-cell *matCellDef="let element"> {{ element.after }} </mat-cell>
-      </ng-container>
-  
-      <!-- Update Column -->
-<!-- Update Column -->
-<ng-container matColumnDef="update">
-  <mat-header-cell *matHeaderCellDef> Update </mat-header-cell>
-  <mat-cell *matCellDef="let element">
-    <button mat-icon-button color="primary" (click)="update(element.package, element.after)">
-      <mat-icon>upgrade</mat-icon>
-    </button>
-    <mat-icon
-      *ngIf="element.isMajorUpdate"
-      color="warn"
-      matTooltip="This update involves a major version change"
-      (click)="openChangelog(element.package, element.before, element.after)">
-      error
-    </mat-icon>
-    <mat-icon
-      *ngIf="!element.isMajorUpdate"
-      matTooltip="Show changelog"
-      (click)="openChangelog(element.package, element.before, element.after)">
-      info
-    </mat-icon>
-  </mat-cell>
-</ng-container>
 
-  
-      <!-- Table Headers -->
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-  
-      <!-- Table Rows -->
-      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+      <mat-header-row *matHeaderRowDef="displayedColumns" />
+      <mat-row *matRowDef="let row; columns: displayedColumns" />
     </mat-table>
-  
-    <!-- Paginator -->
-    <mat-paginator *ngIf="count > 10"
-      [pageSizeOptions]="[5, 10, 20]"
-      showFirstLastButtons
-      [pageSize]="10"
-    ></mat-paginator>
-  </ng-container>
-  <p *ngIf="!count" class="empty">
-    <mat-icon fontIcon="check_circle"></mat-icon>
-    no updates available.
-  </p>
+
+    @if (rows().length > 10) {
+      <mat-paginator [pageSizeOptions]="[5, 10, 20]" [pageSize]="10" showFirstLastButtons />
+    }
+  } @else {
+    <p class="empty">
+      <mat-icon fontIcon="check_circle" />
+      no updates available.
+    </p>
+  }
 </div>

@@ -1,129 +1,109 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, Inject, OnInit, SimpleChanges } from '@angular/core';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { marked } from 'marked';
+import { firstValueFrom } from 'rxjs';
 import * as semver from 'semver';
-import { DependencyService } from '../core/services/dependency.service';
-import { GithubRelease } from '../github.service';
+import { DependencyService } from '../core/dependency.service';
+import { PackageStore } from '../core/package-store';
+import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.component';
+
+export interface ChangelogInfoData {
+  packageName: string;
+  currentVersion: string | null;
+  newVersion: string;
+}
+
+interface GithubRelease {
+  name: string | null;
+  tag_name: string;
+  body: string | null;
+}
 
 @Component({
   selector: 'app-changelog-info',
-  templateUrl: `changelog-info.component.html`,
-  styleUrls: ['./changelog-info.component.scss'],
+  imports: [MatButtonModule, MatDialogModule, LoadingSpinnerComponent],
+  templateUrl: './changelog-info.component.html',
+  styleUrl: './changelog-info.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangelogInfoComponent implements OnInit {
-  
-  changelog: string | null = null;
-  isLoading = true;
+  private readonly http = inject(HttpClient);
+  private readonly dependencyService = inject(DependencyService);
+  private readonly store = inject(PackageStore);
+  protected readonly data = inject<ChangelogInfoData>(MAT_DIALOG_DATA);
 
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { packageName: string; currentVersion: string | null; newVersion: string },
-    private http: HttpClient, 
-    private dependencyService:DependencyService,
-  ) {
-    console.log('Dialog received data:', this.data);
-
-  if (!this.data.packageName) {
-    console.error('Error: packageName is null or undefined.');
-    return;
-  }
-  this.fetchChangelog();
-}
+  protected readonly changelog = signal<string | null>(null);
+  protected readonly isLoading = signal(true);
+  /** rendered markdown; bound via [innerHTML], which Angular sanitizes */
+  protected readonly changelogHtml = computed(() => {
+    const changelog = this.changelog();
+    return changelog ? marked.parse(changelog, { async: false }) : null;
+  });
 
   ngOnInit(): void {
-    console.log('changelog init',this.data.packageName,this.data.currentVersion,this.data.newVersion)
-  }
-  ngOnChanges(changes: SimpleChanges): void {
-    //Called before any other lifecycle hook. Use it to inject dependencies, but avoid any serious work here.
-    //Add '${implements OnChanges}' to the class.
-    console.log(changes);
+    void this.loadChangelog().finally(() => this.isLoading.set(false));
   }
 
-  private fetchChangelog(): void {
-    // Query the NPM registry for package details
-    
-    this.dependencyService.getPackageVersions(this.data.packageName).subscribe(
-      (data) => {
-        const repositoryUrl = data?.repository?.url;
-        console.log('changelog repository url',repositoryUrl)
-        if (repositoryUrl && repositoryUrl.includes('github.com')) {
-          const apiUrl = this.convertRepoToApi(repositoryUrl);
-          console.log('fetch changelog for',apiUrl)
-          this.getChangelogFromGithub(apiUrl);
-        } else {
-          this.changelog = 'Repository URL not available or not hosted on GitHub.';
-        }
-      },
-      (error) => {
-        console.error('Error fetching package details:', error);
-        this.changelog = 'Failed to fetch package details.';
+  protected install(): void {
+    this.store.setVersion(this.data.packageName, this.data.newVersion);
+  }
+
+  private async loadChangelog(): Promise<void> {
+    let repositoryUrl: string | undefined;
+    try {
+      const info = await firstValueFrom(this.dependencyService.getPackageVersions(this.data.packageName));
+      repositoryUrl = info.repository?.url;
+    } catch {
+      this.changelog.set('Failed to fetch package details.');
+      return;
+    }
+    if (!repositoryUrl?.includes('github.com')) {
+      this.changelog.set('Repository URL not available or not hosted on GitHub.');
+      return;
+    }
+    const apiUrl = this.toGithubApiUrl(repositoryUrl);
+    this.changelog.set((await this.fetchReleaseNotes(apiUrl)) ?? (await this.fetchChangelogFile(apiUrl)));
+  }
+
+  /** release notes of all GitHub releases between the current and the new version */
+  private async fetchReleaseNotes(apiUrl: string): Promise<string | null> {
+    try {
+      const releases = await firstValueFrom(this.http.get<GithubRelease[]>(`${apiUrl}/releases`));
+      if (!releases.length) {
+        return null;
       }
-    );
+      const from = semver.minVersion(this.data.currentVersion ?? '0.0.0')?.version ?? '0.0.0';
+      const to = semver.minVersion(this.data.newVersion)?.version ?? this.data.newVersion;
+      const range = `>${from} <=${to}`;
+      return releases
+        .filter((release) => {
+          const version = semver.coerce(release.tag_name) ?? semver.coerce(release.name);
+          return version && semver.satisfies(version, range);
+        })
+        .map((release) => `## ${release.name || release.tag_name}\n\n${release.body ?? ''}`)
+        .join('\n\n');
+    } catch {
+      return null;
+    }
   }
 
-  private convertRepoToApi(repoUrl: string): string {
-    return repoUrl
-      .replace('git+', '')
-      .replace('.git', '')
-      .replace('github.com', 'api.github.com/repos');
-  }
-
-  private getChangelogFromGithub(apiUrl: string): void {
-    // Try fetching releases first
-    this.http.get<GithubRelease[]>(`${apiUrl}/releases`).subscribe(
-      
-      (releases) => {
-        console.log('github releases',releases)
-        if (releases && releases.length > 0) {
-          for (const release  of releases) {
-            const clean = semver.coerce(release.name) || release.name;
-            const before = this.extractVersionFromRange(this.data.currentVersion || '');
-            const after = this.extractVersionFromRange(this.data.newVersion);
-            if(semver.satisfies(clean ,`${before} - ${after}`))
-              {
-                console.log('release %s satisfies range %s ',release.tag_name, `${before} - ${after}`)
-                console.log(release.body)
-                this.changelog += release.body || '';
-              }else{
-              console.log('release %s DOESNT satisfy range %s ',clean, `${before} - ${after}`)
-            }
-            
-          }
-        } else {
-          this.fetchRawChangelog(apiUrl);
-        }
-        this.isLoading = false;
-      },
-      (error) => {
-        console.warn('Releases not found, attempting to fetch raw changelog:', error);
-        this.fetchRawChangelog(apiUrl);
-        this.isLoading = false;
-      }
-    );
-  }
-  
-  private fetchRawChangelog(apiUrl: string): void {
-    this.http
-    .get(`${apiUrl}/contents/CHANGELOG.md`, {
-        headers: { Accept: 'application/vnd.github.v3.raw' },
-        responseType: 'text',
-      })
-      .subscribe(
-        (changelog) => {
-          this.changelog = changelog;
-        },
-        (error) => {
-          console.error('Error fetching raw changelog:', error);
-          this.changelog = 'No changelog found.';
-          this.isLoading = false;
-        }
+  private async fetchChangelogFile(apiUrl: string): Promise<string> {
+    try {
+      return await firstValueFrom(
+        this.http.get(`${apiUrl}/contents/CHANGELOG.md`, {
+          headers: { Accept: 'application/vnd.github.v3.raw' },
+          responseType: 'text',
+        }),
       );
+    } catch {
+      return 'No changelog found.';
+    }
   }
 
-  extractVersionFromRange(range: string): string {
-    const match = range.match(/(\d+\.\d+\.\d+)/);
-    return match ? match[1] : range;
-  }
-  install(){
-    this.dependencyService.setPackageVersion(this.data.packageName,this.data.newVersion)
+  private toGithubApiUrl(repoUrl: string): string {
+    const path = repoUrl.replace(/^.*github\.com[/:]/, '').replace(/\.git$/, '');
+    return `https://api.github.com/repos/${path}`;
   }
 }

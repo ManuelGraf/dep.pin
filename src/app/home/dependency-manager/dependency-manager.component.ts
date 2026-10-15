@@ -1,487 +1,247 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-/* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { DOCUMENT } from '@angular/common';
-import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
-import {
-  AbstractControl,
-  FormArray,
-  FormBuilder,
-  FormControl,
-  FormGroup,
-  ValidationErrors,
-  ValidatorFn,
-} from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
+import { JsonPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
-import { NgScrollbar } from 'ngx-scrollbar';
-import { firstValueFrom, map, Subject, takeUntil } from 'rxjs';
-import * as semver from 'semver';
-import { AuditReport } from '../../audit-report/audit-report.component';
-import { ChangelogInfoComponent } from '../../changelog-info/changelog-info.component';
-import { ClipboardService } from '../../clipboard.service';
-import { ElectronService } from '../../core/services';
-import {
-  Dependencies,
-  DependencyService,
-  PackageJson,
-} from '../../core/services/dependency.service';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { firstValueFrom } from 'rxjs';
+import { AuditReportComponent } from '../../audit-report/audit-report.component';
+import { DependencyService } from '../../core/dependency.service';
+import { DesktopService } from '../../core/desktop.service';
+import { AuditReport, PackageJson, UpdateReport } from '../../core/models';
+import { DependencyEntry, DependencyType, PackageStore } from '../../core/package-store';
+import { LoadingSpinnerComponent } from '../../loading-spinner/loading-spinner.component';
+import { PackageAutocompleteComponent } from '../../package-autocomplete/package-autocomplete.component';
+import { PackageInfoComponent } from '../../package-info/package-info.component';
 import { SettingsService } from '../../settings.service';
 import { StateService } from '../../state.service';
-import { UpdateReport } from '../../update-report/update-report.component';
-// Define the structure of dependencies and package.json
+import { UpdateReportComponent } from '../../update-report/update-report.component';
+
+interface DependencyGroup {
+  type: DependencyType;
+  label: string;
+  count: number;
+  items: DependencyEntry[];
+}
+
+/** result of a long running npm task */
+interface TaskState<T> {
+  running: boolean;
+  result?: T;
+  error?: string;
+}
+
+const groupLabels: Record<DependencyType, string> = {
+  dependency: 'Dependencies',
+  devDependency: 'DevDependencies',
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 @Component({
   selector: 'app-dependency-manager',
+  imports: [
+    JsonPipe,
+    MatButtonModule,
+    MatCardModule,
+    MatChipsModule,
+    MatExpansionModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatToolbarModule,
+    MatTooltipModule,
+    AuditReportComponent,
+    LoadingSpinnerComponent,
+    PackageAutocompleteComponent,
+    PackageInfoComponent,
+    UpdateReportComponent,
+  ],
   templateUrl: './dependency-manager.component.html',
-  styleUrls: ['./dependency-manager.component.scss'],
+  styleUrl: './dependency-manager.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:dragover)': 'onDragOver($event)',
+    '(document:drop)': 'onDrop($event)',
+  },
 })
-export class DependencyManagerComponent implements OnInit {
-  dependenciesForm!: FormGroup;
-  errorMessages: string[] = [];
-  isLoading = false;
-  isAuditRunning = false;
-  package: PackageJson | null = null;
-  showPackage: boolean = false;
-  auditResults?: AuditReport;
-  auditErrors?: any;
-  updateResults?: UpdateReport;
-  updateErrors?: any;
-  cancelSubscriptions$ = new Subject<any>();
-  isFileDraggedOver: boolean = false;
-  isHeaderCondensed: boolean = false;
-  scrollHandle:any;
-  filterValue: string ="";
-  get dependencies(){
-    return this.dependenciesForm.get('dependencies') as FormArray;
-  }
-  get dependencyCount(){
-    return (this.dependenciesForm.get('dependencies') as FormArray).length;
-  }
-  get stateAction(){
-    return this.state.getCurrentAction()
-  }
+export class DependencyManagerComponent {
+  private readonly store = inject(PackageStore);
+  private readonly dependencyService = inject(DependencyService);
+  private readonly desktop = inject(DesktopService);
+  private readonly snackBar = inject(MatSnackBar);
+  protected readonly state = inject(StateService);
+  protected readonly settings = inject(SettingsService);
 
-  @ViewChild(NgScrollbar) scrollBar!:NgScrollbar;
-  @ViewChild('filterInput', { static: false }) filterInput!: ElementRef;
-  
+  protected readonly package = this.store.package;
+  protected readonly showPackage = signal(false);
+  protected readonly isFileDraggedOver = signal(false);
+  protected readonly isHeaderCondensed = signal(false);
+  protected readonly filter = signal('');
 
-  constructor(
-    private fb: FormBuilder,
-    public dependencyService: DependencyService,
-    private electron: ElectronService,
-    private snackBar: MatSnackBar,
-    private router: Router,
-    private clipboard: ClipboardService,
-    public state:StateService,
-    @Inject(DOCUMENT) private document: Document,
-    private dialog: MatDialog,
-    private settings:SettingsService
-  ) {
-  }
-  ngAfterViewInit(): void {
-    //Called after ngAfterContentInit w1hen the component's view has been initialized. Applies to components only.
-    //Add 'implements AfterViewInit' to the class.
-    this.scrollHandle = this.scrollBar.nativeElement.addEventListener('scroll',this.onScroll.bind(this));
-  }
-  onScroll(evt:any){
-    this.isHeaderCondensed = evt.target.scrollTop > 0
-  }
-  ngOnInit(): void {
-    this.document.addEventListener('dragover',this.onDragOver.bind(this))
-    this.document.addEventListener('drop',this.onDrop.bind(this))
-    this.dependenciesForm = this.fb.group({
-      dependencies: this.fb.array([]),
-      // devDependencies: this.fb.array([],peerDependencyValidator()),
-    });
-    // some outside component wants to change selected version
-    this.dependencyService.setPackageVersionSelection$
-      .pipe(takeUntil(this.cancelSubscriptions$))
-      .subscribe((versionInfo) => {
-        console.log('set package version',versionInfo)
-        if (this.package && this.dependenciesForm.get('dependencies')) {
-          for (const dep of (
-            this.dependenciesForm.get('dependencies') as FormArray
-          ).controls) {
-            if (dep.get('name')?.value === versionInfo.name) {
-              dep.get('version')?.setValue(versionInfo.version);
-              console.log('external component changed version:', versionInfo);
-              this.updatePackageJson();
-            }
-          }
-        }
-      });
-    (window as any).deps = this.dependenciesForm.get('dependencies');
-  }
-  onDroppedTop(){
-    console.log('dropped top')
-  }
-  testDialog(){
-        this.dialog.open(ChangelogInfoComponent, {
-          width: '800px',
-          data: { packageName:'@angular/core', currentVersion:'17.0.0', newVersion:'19.1.3' },
-        });
-    
-  }
-  setState(state: string) {
-    this.state.info(state);
-  }
+  protected readonly audit = signal<TaskState<AuditReport>>({ running: false });
+  /** package revision the current audit result belongs to */
+  private readonly auditedRevision = signal(0);
+  protected readonly isAuditOutdated = computed(
+    () => !!this.audit().result && this.auditedRevision() !== this.store.revision(),
+  );
+  protected readonly updates = signal<TaskState<UpdateReport>>({ running: false });
+  protected readonly isLoading = computed(() => this.audit().running || this.updates().running);
 
-  filteredDependencies:AbstractControl[] = [];
+  protected readonly dependencyCount = computed(() => this.store.entries().length);
 
-  get countDependencies() {
-    return Object.keys(this.package?.dependencies || {}).length;
-  }
-  get countDevDependencies() {
-    return Object.keys(this.package?.devDependencies || {}).length;
-  }
-  onFileSelected(event: any): void {
-    this.isLoading = true;
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        try {
-          this.onPackageLoaded(e);
-        } catch (error) {
-          this.snackBar.open('Invalid package.json file', 'Close', {
-            duration: 3000,
-          });
-        }
-      };
-      reader.readAsText(file);
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.dataTransfer?.items) {
-      const isJson = Array.from(event.dataTransfer.items).some(
-        (item) => item.kind === 'file' && item.type === 'application/json'
-      );
-      console.log(isJson);
-      if (!isJson) {
-        this.state.start('Invalid file type detected');
-        this.isFileDraggedOver = false;
-      } else {
-        this.state.end('Invalid file type detected');
-        this.isFileDraggedOver = true;
-      }
-    }
-  }
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (this.isFileDraggedOver) {
-      this.isFileDraggedOver = false;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.dataTransfer?.files.length) {
-        const file = event.dataTransfer.files[0];
-        if (file.type === 'application/json') {
-          const reader = new FileReader();
-          reader.onload = (e: any) => {
-            try {
-              this.onPackageLoaded(e);
-            } catch (error) {
-              this.snackBar.open('Invalid package.json file', 'Close', {
-                duration: 3000,
-              });
-            }
-          };
-          reader.readAsText(file);
-        } else {
-          this.snackBar.open('Please drop a valid package.json file', 'Close', {
-            duration: 3000,
-          });
-        }
-      }
-    }
-  }
-  onPackageLoaded(e: any) {
-    try {
-      const packageJson: PackageJson = JSON.parse(e.target.result);
-      if (packageJson && typeof packageJson === 'object') {
-        this.package = packageJson;
-        this.clearDependencies();
-        this.addDependencies(packageJson.dependencies || {}, 'dependency');
-        this.addDependencies(packageJson.devDependencies || {}, 'devDependency');
-        this.setState('package.json loaded.');
-        this.setFilter('',true);
-        this.snackBar.open('package loaded', 'Close', {
-          duration: 5000,
-          panelClass: ['snackbar'],
-        });
-        this.state.clear();
-        this.setState('package.json loaded.')
-        this.isLoading = false;
-        this.audit();
-        this.update();    
-    
-        this.isLoading = false;
-      }
-    } catch (error) {
-      this.snackBar.open('Invalid package.json content', 'Close', {
-        duration: 3000,
-      });
-      this.isLoading = false;
-    }
-  }
-
-  // async updatePeerDependencies(formGroup:AbstractControl){
-  //   return new Promise((resolve,reject) =>{
-  //     this.getPeerDependencies(formGroup.get('name')?.value,formGroup.get('version')?.value).then(peerDeps =>{
-  //       if(!peerDeps) reject('no peerdeps found');
-  //       formGroup.get('peerDependencies')?.setValue(peerDeps,{emitEvent:false,onlySelf:true});
-  //       console.log('updated peerdeps for ',formGroup.get('name')?.value,peerDeps)
-  //       resolve(peerDeps);
-  //     }).catch(()=>reject('error getting per dependencies'));
-  //   })
-  // }
-
-  clearDependencies() {
-    const formArray = this.dependenciesForm.get('dependencies') as FormArray;
-    formArray.clear();
-  }
-  addDependencies(dependencies: Dependencies, type: string): void {
-    const formArray = this.dependenciesForm.get('dependencies') as FormArray;
-    Object.keys(dependencies).forEach((dep) => {
-      this.addDependency(dep, dependencies[dep], formArray, type);
-    });
-    // formArray.updateValueAndValidity();
-  }
-
-  addDependency(
-    name: string,
-    version: string,
-    formArray: FormArray,
-    type: string
-  ) {
-    const dependencyGroup = this.fb.group(
-      {
-        name: [name],
-        version: [version],
-        type: [type],
-      },
-      { validators: [], updateOn: 'blur' }
-    );
-    if (version.includes('file:')) return;
-    formArray.push(dependencyGroup);
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    // let versions = await lastValueFrom( this.dependencyService.getPackageVersions(name));
-    // this.dependencyService.addToCache(name,versions);
-  }
-
-  // async getPeerDependencies(name:string,version:string){
-  //   const ret = await this.dependencyService.getPackageVersionInfo(name,version);
-  //   return ret?.peerDependencies || {};
-  // }
-
-  onVersionChange(dep: FormControl, evt: any) {
-    console.log('version change', dep.value, evt);
-    setTimeout(() => {
-      this.updatePackageJson();
-      this.auditResults = {};
-      this.auditErrors = {};
-    });
-  }
-  validatePeerDeps(peerDeps: any) {
-    if (!Object.keys(peerDeps).length) return [];
-    const issues: string[] = [];
-    Object.entries(peerDeps).forEach(([peerName, peerVersion]) => {
-      let hasPeerDep = false;
-      const all = this.dependenciesForm.get('dependencies') as FormArray;
-      all.controls.forEach((ctrl: AbstractControl) => {
-        if (peerName === ctrl.get('name')?.value) {
-          hasPeerDep = true;
-          if (
-            !semver.satisfies(ctrl.get('version')?.value, peerVersion as string)
-          ) {
-            issues.push(
-              `Peer Dependency not met: ${
-                ctrl.get('name')?.value
-              } requires ${peerVersion} but found ${
-                ctrl.get('version')?.value
-              }.\n`
-            );
-          }
-        }
-      });
-      if (!hasPeerDep)
-        issues.push(`peer dependency missing: ${peerName} @ ${peerVersion}\n`);
-    });
-    return issues;
-  }
-
-  versionValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const name = control.get('name')?.value;
-      const version = control.get('version')?.value;
-      const peerdeps = this.dependencyService.getPackageVersion(
-        name,
-        version
-      )?.peerDependencies;
-      if (peerdeps) {
-        const errors = this.validatePeerDeps(peerdeps);
-        if (errors && errors.length) {
-          console.log('validation errors! ', errors);
-          // control.get('version')?.setErrors(errors);
-          // control.get('version')?.markAsTouched();
-
-          return { unmetPeerDependencies: errors.join('') };
-        }
-      }
-      return null;
-    };
-  }
-  updateAndValidatePeerDependencies(control: AbstractControl) {
-    const peerDeps = this.dependencyService.getPackageVersion(
-      control.get('name')?.value,
-      control.get('version')?.value
-    )?.peerDependencies;
-    const peerDepErrors = this.validatePeerDeps(peerDeps);
-    if (peerDepErrors.length > 0) {
-      return peerDepErrors.join(', ');
-    }
-    return null;
-  }
-  jumpToDep(evt: string | null) {
-    console.log(evt);
-    this.router.navigate([], { fragment: evt || '' });
-  }
-  getAvailableVersionsList(name: string) {
-    return this.dependencyService.getPackageVersions(name).pipe(
-      map((versions) => {
-        if (versions && versions.versions)
-          return Object.keys(versions.versions).sort((a, b) =>
-            semver.rcompare(a, b)
-          );
+  protected readonly groups = computed<DependencyGroup[]>(() => {
+    const entries = this.store.entries();
+    const matches = this.createFilter(this.filter());
+    return (['dependency', 'devDependency'] as const)
+      .map((type) => {
+        const ofType = entries.filter((entry) => entry.type === type);
+        return {
+          type,
+          label: groupLabels[type],
+          count: ofType.length,
+          items: ofType.filter((entry) => matches(entry.name)),
+        };
       })
-    );
+      .filter((group) => group.items.length > 0);
+  });
+
+  protected isVisibleDependencyType(type: DependencyType): boolean {
+    return type === 'dependency'
+      ? this.settings.isVisibleDependencies()
+      : this.settings.isVisibleDevDependencies();
   }
-  updatePackageJson() {
-    this.state.start('update Package Json');
-    for (const dep of (this.dependenciesForm.get('dependencies') as FormArray)
-      .controls) {
-      const name = dep.get('name')?.value;
-      const version = dep.get('version')?.value;
-      const type = dep.get('type')?.value;
-      switch (type) {
-        case 'dependency':
-          if (this.package?.dependencies?.hasOwnProperty(name))
-            this.package.dependencies[name] = version;
-          break;
-          case 'devDependency':
-            if (this.package?.devDependencies?.hasOwnProperty(name))
-              this.package.devDependencies[name] = version;
-            break;
-          }
-        }
-        this.state.end('update Package Json');
-        
-        console.log('updated json', JSON.stringify(this.package));
-      }
-      getDepForm(): FormArray {
-        return this.dependenciesForm.get('dependencies') as FormArray;
-      }
-      copyJsonToClipboard() {
-    this.clipboard.copyToClipboard(this.package);
-    this.snackBar.open('coped to Clipboard', 'close', {
-      duration: 1000,
-    });
+
+  protected onScroll(event: Event): void {
+    this.isHeaderCondensed.set((event.target as HTMLElement).scrollTop > 0);
   }
-  async onPackageAdded(name: any) {
-    const available = await firstValueFrom(this.getAvailableVersionsList(name));
-    if (available) {
-      const latest = available[0];
-      this.addDependency(
-        name.name,
-        latest,
-        this.dependenciesForm.get('dependencies') as FormArray,
-        'dependencies'
-      );
-      console.log('package added', name, latest);
+
+  protected onFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      void this.readPackageFile(file);
     }
   }
-  async audit() {
-    console.log('audit start');
-    this.state.start('npm audit is running...')
-    this.isAuditRunning = true;
-    this.auditErrors = null;
-    this.isLoading = true;
-    this.auditResults = undefined;
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    const items = Array.from(event.dataTransfer?.items ?? []);
+    const isJson = items.some((item) => item.kind === 'file' && item.type === 'application/json');
+    this.isFileDraggedOver.set(isJson);
+    if (isJson) {
+      this.state.end('Invalid file type detected');
+    } else {
+      this.state.start('Invalid file type detected');
+    }
+  }
+
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    if (!this.isFileDraggedOver()) {
+      return;
+    }
+    this.isFileDraggedOver.set(false);
+    const file = event.dataTransfer?.files[0];
+    if (file?.type === 'application/json') {
+      void this.readPackageFile(file);
+    } else {
+      this.snackBar.open('Please drop a valid package.json file', 'Close', { duration: 3000 });
+    }
+  }
+
+  private async readPackageFile(file: File): Promise<void> {
+    let packageJson: unknown;
     try {
-      this.auditResults = await this.electron.runNpmAuditWithJson(this.package);
+      packageJson = JSON.parse(await file.text());
+    } catch {
+      packageJson = null;
+    }
+    if (!packageJson || typeof packageJson !== 'object') {
+      this.snackBar.open('Invalid package.json file', 'Close', { duration: 3000 });
+      return;
+    }
+    this.store.load(packageJson as PackageJson);
+    this.filter.set('');
+    this.state.clear();
+    this.state.info('package.json loaded.');
+    this.snackBar.open('package loaded', 'Close', { duration: 5000 });
+    void this.runAudit();
+    void this.checkUpdates();
+  }
+
+  protected async runAudit(): Promise<void> {
+    const pkg = this.store.package();
+    if (!pkg) {
+      return;
+    }
+    const message = 'npm audit is running...';
+    this.state.start(message);
+    this.audit.set({ running: true });
+    const revision = this.store.revision();
+    try {
+      this.audit.set({ running: false, result: await this.desktop.audit(pkg) });
+      this.auditedRevision.set(revision);
     } catch (e) {
-      this.auditErrors = e;
-      console.warn(e);
-    }
-    this.isLoading = false;
-    console.log('audit end', this.auditResults);
-    this.state.end('npm audit is running...')
-    this.isAuditRunning = false;
-  }
-  update() {
-    this.isLoading = true;
-    this.updateResults = undefined;
-    this.updateErrors = null;
-    this.state.start('checking for updates...')
-    
-    this.electron
-    .runNpmCheckUpdates(this.package)
-    .then((result) => {
-      this.updateResults = result;
-      this.isLoading = false;
-      this.state.end('checking for updates...')
-    })
-    .catch((e) => {
-      this.state.end('checking for updates...')
-    });
-  }
-
-  applyFilter(event: Event): void {
-    this.setFilter((event.target as HTMLInputElement).value)    
-  }
-  setFilter(query:string,updateInput=false){
-    this.filterValue = query;
-    
-    if(this.dependenciesForm.get('dependencies')){
-      this.filteredDependencies = (this.dependenciesForm.get('dependencies') as FormArray).controls
-      .filter(((ctrl:AbstractControl)=>{
-        const name = ctrl.get('name')?.value; 
-        const type = ctrl.get('type')?.value;
-        // if(!this.settings.isVisibleDevDependencies && type === 'devDependency') return false
-        return (name && name.match(this.filterValue) ? true : false)
-      }))
-    }else{
-      this.filteredDependencies = []
-    }
-    if(updateInput){
-      this.filterInput.nativeElement.value = this.filterValue;
-    } 
-  }
-
-  isVisibleDependencyType(type:string){
-    switch(type){
-      case 'dependency':
-        return this.settings.isVisibleDependencies
-      case 'devDependency':
-        return this.settings.isVisibleDevDependencies
-      default:
-        return true;
+      this.audit.set({ running: false, error: errorMessage(e) });
+    } finally {
+      this.state.end(message);
     }
   }
 
+  protected async checkUpdates(): Promise<void> {
+    const pkg = this.store.package();
+    if (!pkg) {
+      return;
+    }
+    const message = 'checking for updates...';
+    this.state.start(message);
+    this.updates.set({ running: true });
+    try {
+      this.updates.set({ running: false, result: await this.desktop.checkUpdates(pkg) });
+    } catch (e) {
+      this.updates.set({ running: false, error: errorMessage(e) });
+    } finally {
+      this.state.end(message);
+    }
+  }
 
-  ngOnDestroy(): void {
-    //Called once, before the instance is destroyed.
-    //Add 'implements OnDestroy' to the class.
-    this.document.removeEventListener('dragover', this.onDragOver.bind(this));
-    this.document.removeEventListener('drop', this.onDrop.bind(this));
-    this.scrollBar.nativeElement.removeEventListener('scroll',this.onScroll.bind(this))
-    this.cancelSubscriptions$.next(true);
-    this.cancelSubscriptions$.complete();
+  protected async copyJsonToClipboard(): Promise<void> {
+    await this.desktop.copyToClipboard(JSON.stringify(this.store.package(), null, 2));
+    this.snackBar.open('copied to clipboard', 'Close', { duration: 1000 });
+  }
+
+  protected async onPackageAdded(name: string): Promise<void> {
+    try {
+      await firstValueFrom(this.dependencyService.getPackageVersions(name));
+    } catch {
+      this.snackBar.open(`Could not load versions of ${name}`, 'Close', { duration: 3000 });
+      return;
+    }
+    const latest = this.dependencyService.getLatestVersion(name);
+    if (latest) {
+      this.store.addDependency(name, latest);
+    }
+  }
+
+  /** filter queries are regular expressions, falling back to plain text if invalid */
+  private createFilter(query: string): (name: string) => boolean {
+    if (!query) {
+      return () => true;
+    }
+    try {
+      const regexp = new RegExp(query, 'i');
+      return (name) => regexp.test(name);
+    } catch {
+      const lower = query.toLowerCase();
+      return (name) => name.toLowerCase().includes(lower);
+    }
   }
 }
